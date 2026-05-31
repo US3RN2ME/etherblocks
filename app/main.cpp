@@ -1,5 +1,5 @@
+#include <etherblocks/system/Logger.hpp>
 #include <exception>
-#include <iostream>
 
 #include "Application.hpp"
 
@@ -10,10 +10,10 @@ int main() {
       etherblocks::app::Application application;
       application.run();
    } catch (const std::exception& error) {
-      std::cerr << error.what() << '\n';
+      etherblocks::system::log(etherblocks::system::LogLevel::Error, error.what());
       return 1;
    } catch (...) {
-      std::cerr << "Unknown fatal error\n";
+      etherblocks::system::log(etherblocks::system::LogLevel::Error, "Unknown fatal error");
       return 1;
    }
 }

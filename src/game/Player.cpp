@@ -74,8 +74,7 @@ namespace etherblocks::game {
    void Player::setMode(PlayerMode mode) {
       mode_ = mode;
       velocity_ = {};
-      system::logger().log(system::LogLevel::Info,
-                           mode_ == PlayerMode::Creative ? "Player mode: creative" : "Player mode: survival");
+      system::log(system::LogLevel::Info, mode_ == PlayerMode::Creative ? "Player mode: creative" : "Player mode: survival");
    }
 
    void Player::toggleMode() {

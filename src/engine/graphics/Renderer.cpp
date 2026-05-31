@@ -1,6 +1,7 @@
 #include <etherblocks/engine/graphics/Material.hpp>
 #include <etherblocks/engine/graphics/Mesh.hpp>
 #include <etherblocks/engine/graphics/Renderer.hpp>
+#include <etherblocks/system/Logger.hpp>
 #include <glad/glad.h>
 #include <limits>
 #include <stdexcept>
@@ -58,6 +59,7 @@ namespace etherblocks::engine::graphics {
 
    void Renderer::draw(const Mesh& mesh, Primitive primitive) const {
       if (mesh.vertexCount() > static_cast<std::size_t>(std::numeric_limits<GLsizei>::max())) {
+         system::log(system::LogLevel::Error, "Mesh vertex count exceeds the OpenGL limit");
          throw std::overflow_error{"Mesh vertex count exceeds the OpenGL limit"};
       }
       mesh.bind();

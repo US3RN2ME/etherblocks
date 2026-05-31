@@ -1,4 +1,5 @@
 #include <etherblocks/engine/graphics/Shader.hpp>
+#include <etherblocks/system/Logger.hpp>
 #include <etherblocks/system/Utils.hpp>
 #include <glad/glad.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -51,6 +52,7 @@ namespace etherblocks::engine::graphics {
             case ShaderType::Fragment:
                return GL_FRAGMENT_SHADER;
          }
+         system::log(system::LogLevel::Error, "Unknown shader type");
          throw std::invalid_argument{"Unknown shader type"};
       }
 
@@ -61,13 +63,16 @@ namespace etherblocks::engine::graphics {
    } // namespace
 
    Shader::Shader(std::string_view path, ShaderType type) {
+      const std::string filePath(path);
       const auto source = system::Utils::readFile(path);
       if (source.empty()) {
-         throw std::runtime_error("Failed to read shader file");
+         system::log(system::LogLevel::Error, "Failed to read shader file: " + filePath);
+         throw std::runtime_error("Failed to read shader file: " + filePath);
       }
 
       GlHandleGuard<deleteShader> shader(glCreateShader(toGl(type)));
       if (shader.get() == 0) {
+         system::log(system::LogLevel::Error, "glCreateShader failed: " + filePath);
          throw std::runtime_error("glCreateShader failed");
       }
 
@@ -87,9 +92,12 @@ namespace etherblocks::engine::graphics {
             glGetShaderInfoLog(shader.get(), logLength, nullptr, log.data());
          }
 
-         throw std::runtime_error("Shader compilation failed:\n" + log);
+         const auto message = "Shader compilation failed: " + filePath + "\n" + log;
+         system::log(system::LogLevel::Error, message);
+         throw std::runtime_error(message);
       }
       id_ = shader.release();
+      system::log(system::LogLevel::Debug, "Shader compiled: " + filePath);
    }
 
    Shader::Shader(Shader&& other) noexcept
@@ -124,6 +132,7 @@ namespace etherblocks::engine::graphics {
 
       GlHandleGuard<deleteProgram> program(glCreateProgram());
       if (program.get() == 0) {
+         system::log(system::LogLevel::Error, "glCreateProgram failed");
          throw std::runtime_error("glCreateProgram failed");
       }
 
@@ -143,9 +152,13 @@ namespace etherblocks::engine::graphics {
             glGetProgramInfoLog(program.get(), logLength, nullptr, log.data());
          }
 
-         throw std::runtime_error("Program link failed:\n" + log);
+         const auto message = "Program link failed: " + std::string(vertexPath) + ", " + std::string(fragmentPath) + "\n" + log;
+         system::log(system::LogLevel::Error, message);
+         throw std::runtime_error(message);
       }
       id_ = program.release();
+      system::log(system::LogLevel::Debug,
+                  "Shader program linked: " + std::string(vertexPath) + ", " + std::string(fragmentPath));
    }
 
    ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept

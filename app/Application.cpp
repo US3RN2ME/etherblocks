@@ -9,6 +9,7 @@
 #include <etherblocks/game/World.hpp>
 #include <etherblocks/system/FrameClock.hpp>
 #include <etherblocks/system/Input.hpp>
+#include <etherblocks/system/Logger.hpp>
 #include <etherblocks/system/Window.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <optional>
@@ -54,6 +55,11 @@ namespace etherblocks::app {
          worldMaterial_.shader().set("uTexture", 0);
          worldMaterial_.shader().set("uModel", glm::mat4{1.0f});
          rebuildWorldMesh();
+         sys::log(sys::LogLevel::Info, "Application initialized");
+      }
+
+      ~Impl() {
+         sys::log(sys::LogLevel::Info, "Application shutting down");
       }
 
       void run() {

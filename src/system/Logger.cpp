@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdio>
 #include <etherblocks/system/Logger.hpp>
 #include <iostream>
 #include <utility>
@@ -6,6 +7,12 @@
 namespace etherblocks::system {
 
    namespace {
+      void fallback(std::string_view text) noexcept {
+         std::fputs("[LOGGER ERROR] ", stderr);
+         std::fwrite(text.data(), sizeof(char), text.size(), stderr);
+         std::fputc('\n', stderr);
+      }
+
       const char* label(LogLevel level) noexcept {
          switch (level) {
             case LogLevel::Debug:
@@ -41,26 +48,42 @@ namespace etherblocks::system {
       });
    }
 
-   void Logger::log(LogLevel level, std::string text) const {
-      const LogMessage message{level, std::move(text)};
-      std::vector<Sink> sinks;
+   void Logger::log(LogLevel level, std::string_view text) const noexcept {
+      try {
+         const LogMessage message{level, std::string(text)};
+         std::vector<Sink> sinks;
 
-      {
-         std::scoped_lock lock(mutex_);
-         sinks.reserve(sinks_.size());
-         for (const auto& entry : sinks_) {
-            sinks.push_back(entry.second);
+         {
+            std::scoped_lock lock(mutex_);
+            sinks.reserve(sinks_.size());
+            for (const auto& entry : sinks_) {
+               sinks.push_back(entry.second);
+            }
          }
-      }
 
-      for (const auto& sink : sinks) {
-         sink(message);
+         for (const auto& sink : sinks) {
+            try {
+               sink(message);
+            } catch (...) {
+               fallback("Log sink threw an exception");
+            }
+         }
+      } catch (...) {
+         fallback(text);
       }
    }
 
    Logger& logger() {
       static Logger instance;
       return instance;
+   }
+
+   void log(LogLevel level, std::string_view text) noexcept {
+      try {
+         logger().log(level, text);
+      } catch (...) {
+         fallback(text);
+      }
    }
 
 } // namespace etherblocks::system

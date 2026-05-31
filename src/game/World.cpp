@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <etherblocks/game/World.hpp>
+#include <etherblocks/system/Logger.hpp>
+#include <string>
 
 namespace etherblocks::game {
 
@@ -12,6 +14,8 @@ namespace etherblocks::game {
             static_cast<void>(setBlock({x, 0, z}, BlockType::Basic));
          }
       }
+      system::log(system::LogLevel::Info, "World initialized: " + std::to_string(size_.x) + "x" + std::to_string(size_.y) +
+                                              "x" + std::to_string(size_.z));
    }
 
    bool World::setBlock(glm::ivec3 position, BlockType block) noexcept {

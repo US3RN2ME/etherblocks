@@ -1,3 +1,4 @@
+#include <etherblocks/system/Logger.hpp>
 #include <etherblocks/system/Window.hpp>
 #include <etherblocks/system/detail/GlContext.hpp>
 #define GLFW_INCLUDE_NONE
@@ -247,6 +248,7 @@ namespace etherblocks::system {
 
       impl_->handle.reset(glfwCreateWindow(cfg.size.x, cfg.size.y, cfg.title.c_str(), nullptr, nullptr));
       if (impl_->handle == nullptr) {
+         log(LogLevel::Error, "Failed to create GLFW window: " + cfg.title);
          throw std::runtime_error{"Failed to create GLFW window"};
       }
 
@@ -257,9 +259,12 @@ namespace etherblocks::system {
       detail::GlContext::load();
 
       glfwSwapInterval(cfg.vsync ? 1 : 0);
+      log(LogLevel::Info, "Window created: " + cfg.title);
    }
 
-   Window::~Window() = default;
+   Window::~Window() {
+      log(LogLevel::Debug, "Window destroyed");
+   }
 
    Window::Window(Window&& other) noexcept
        : impl_(std::move(other.impl_)) {
@@ -339,6 +344,8 @@ namespace etherblocks::system {
    void Window::setRawMouseMotion(bool enabled) {
       if (glfwRawMouseMotionSupported() != GLFW_FALSE) {
          glfwSetInputMode(impl_->handle.get(), GLFW_RAW_MOUSE_MOTION, enabled ? GLFW_TRUE : GLFW_FALSE);
+      } else if (enabled) {
+         log(LogLevel::Warning, "Raw mouse motion is not supported");
       }
    }
 

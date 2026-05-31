@@ -1,4 +1,5 @@
 #include <etherblocks/engine/graphics/VertexArray.hpp>
+#include <etherblocks/system/Logger.hpp>
 #include <glad/glad.h>
 #include <limits>
 #include <stdexcept>
@@ -32,6 +33,10 @@ namespace etherblocks::engine::graphics {
 
    VertexArray::VertexArray() {
       glGenVertexArrays(1, &id_);
+      if (id_ == 0) {
+         system::log(system::LogLevel::Error, "glGenVertexArrays failed");
+         throw std::runtime_error{"glGenVertexArrays failed"};
+      }
    }
 
    VertexArray::VertexArray(VertexArray&& other) noexcept
@@ -70,6 +75,7 @@ namespace etherblocks::engine::graphics {
    void VertexArray::setAttribute(unsigned int index, int size, VertexAttributeType type, bool normalized, std::size_t stride,
                                   std::size_t offset) const {
       if (stride > static_cast<std::size_t>(std::numeric_limits<GLsizei>::max())) {
+         system::log(system::LogLevel::Error, "Vertex stride exceeds the OpenGL limit");
          throw std::overflow_error{"Vertex stride exceeds the OpenGL limit"};
       }
       bind();

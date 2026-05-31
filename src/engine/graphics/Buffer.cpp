@@ -1,4 +1,5 @@
 #include <etherblocks/engine/graphics/Buffer.hpp>
+#include <etherblocks/system/Logger.hpp>
 #include <glad/glad.h>
 #include <limits>
 #include <stdexcept>
@@ -55,6 +56,7 @@ namespace etherblocks::engine::graphics {
 
       [[nodiscard]] GLsizeiptr toGlSize(std::size_t size) {
          if (size > static_cast<std::size_t>(std::numeric_limits<GLsizeiptr>::max())) {
+            system::log(system::LogLevel::Error, "Buffer size exceeds the OpenGL limit");
             throw std::overflow_error{"Buffer size exceeds the OpenGL limit"};
          }
          return static_cast<GLsizeiptr>(size);
@@ -62,6 +64,7 @@ namespace etherblocks::engine::graphics {
 
       [[nodiscard]] GLintptr toGlOffset(std::size_t offset) {
          if (offset > static_cast<std::size_t>(std::numeric_limits<GLintptr>::max())) {
+            system::log(system::LogLevel::Error, "Buffer offset exceeds the OpenGL limit");
             throw std::overflow_error{"Buffer offset exceeds the OpenGL limit"};
          }
          return static_cast<GLintptr>(offset);
@@ -71,6 +74,10 @@ namespace etherblocks::engine::graphics {
    Buffer::Buffer(BufferTarget target)
        : target_(target) {
       glGenBuffers(1, &id_);
+      if (id_ == 0) {
+         system::log(system::LogLevel::Error, "glGenBuffers failed");
+         throw std::runtime_error{"glGenBuffers failed"};
+      }
    }
 
    Buffer::Buffer(Buffer&& other) noexcept

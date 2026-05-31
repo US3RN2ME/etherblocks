@@ -5,6 +5,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -26,7 +27,7 @@ namespace etherblocks::system {
 
       [[nodiscard]] SinkId addSink(Sink sink);
       void removeSink(SinkId id);
-      void log(LogLevel level, std::string text) const;
+      void log(LogLevel level, std::string_view text) const noexcept;
 
    private:
       mutable std::mutex mutex_;
@@ -35,6 +36,7 @@ namespace etherblocks::system {
    };
 
    [[nodiscard]] Logger& logger();
+   void log(LogLevel level, std::string_view text) noexcept;
 
 } // namespace etherblocks::system
 
