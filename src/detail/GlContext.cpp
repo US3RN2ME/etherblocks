@@ -1,6 +1,7 @@
-#include <GLFW/glfw3.h>
 #include <etherblocks/detail/GlContext.hpp>
 #include <glad/glad.h>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 #include <stdexcept>
 
 namespace etherblocks::detail {
@@ -11,13 +12,13 @@ namespace etherblocks::detail {
    }
 
    void GlContext::load() {
-      if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+      if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) == 0) {
          throw std::runtime_error{"Failed to initialize GLAD"};
       }
    }
 
    GlContext::GlContext() {
-      if (!glfwInit()) {
+      if (glfwInit() == GLFW_FALSE) {
          throw std::runtime_error{"Failed to initialize GLFW"};
       }
    }

@@ -1,10 +1,17 @@
 #version 330 core
-out vec4 FragColor;
+out vec4 fragmentColor;
 
-in vec2 TexCoord;
+in vec2 textureCoordinate;
 
-uniform sampler2D texture1;
+uniform sampler2D uTexture;
+uniform bool uUseOverrideColor;
+uniform vec4 uOverrideColor;
 
 void main() {
-    FragColor = texture(texture1, TexCoord);
+    if (uUseOverrideColor) {
+        fragmentColor = uOverrideColor;
+        return;
+    }
+
+    fragmentColor = texture(uTexture, textureCoordinate);
 }

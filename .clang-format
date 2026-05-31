@@ -55,9 +55,7 @@ SpacesInContainerLiterals: true
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 
-SortIncludes:
-  Enabled: true
-  IgnoreCase: false
+SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<vigil/'

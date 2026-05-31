@@ -1,72 +1,52 @@
 #ifndef ETHERBLOCKS_WINDOW_HPP
 #define ETHERBLOCKS_WINDOW_HPP
 
+#include <etherblocks/Input.hpp>
+#include <glm/glm.hpp>
+#include <memory>
 #include <optional>
-#include <queue>
 #include <string>
 #include <utility>
 #include <variant>
 
-struct GLFWwindow;
-
 namespace etherblocks {
-
-   struct Color {
-      float r{};
-      float g{};
-      float b{};
-      float a{};
-   };
-
-   enum class Buffer : unsigned {
-      Color = 1 << 0,
-      Depth = 1 << 1,
-      Stencil = 1 << 2,
-   };
-
-   inline Buffer operator|(Buffer a, Buffer b) {
-      return static_cast<Buffer>(static_cast<unsigned>(a) | static_cast<unsigned>(b));
-   }
 
    namespace event {
 
       struct Closed {};
 
       struct Resized {
-         int width{};
-         int height{};
+         glm::ivec2 size{};
       };
 
       struct KeyPressed {
-         int key{};
+         Key key{};
          int scancode{};
          int mods{};
       };
 
       struct KeyReleased {
-         int key{};
+         Key key{};
          int scancode{};
          int mods{};
       };
 
       struct MouseMoved {
-         double x{};
-         double y{};
+         glm::dvec2 position{};
       };
 
       struct MouseButtonPressed {
-         int button{};
+         MouseButton button{};
          int mods{};
       };
 
       struct MouseButtonReleased {
-         int button{};
+         MouseButton button{};
          int mods{};
       };
 
       struct MouseScrolled {
-         double xOffset{};
-         double yOffset{};
+         glm::dvec2 offset{};
       };
 
       using Any = std::variant<Closed, Resized, KeyPressed, KeyReleased, MouseMoved, MouseButtonPressed, MouseButtonReleased,
@@ -75,17 +55,8 @@ namespace etherblocks {
 
    enum class CursorMode { Normal, Hidden, Disabled };
 
-   enum class RenderFeature {
-      DepthTest,
-      StencilTest,
-      Blending,
-      CullFace,
-      Multisample,
-   };
-
    struct WindowConfig {
-      int width{800};
-      int height{600};
+      glm::ivec2 size{800, 600};
       std::string title{"Window"};
       bool vsync{true};
       int glMajor{3};
@@ -94,8 +65,7 @@ namespace etherblocks {
 
    class Window {
    public:
-      // TODO: static create() method - no exceptions?
-      explicit Window(WindowConfig cfg = {});
+      explicit Window(const WindowConfig& cfg = {});
       ~Window();
 
       Window(const Window&) = delete;
@@ -105,35 +75,28 @@ namespace etherblocks {
       Window& operator=(Window&& other) noexcept;
 
       [[nodiscard]] bool isOpen() const;
+      [[nodiscard]] const Input& input() const noexcept;
 
       void pollEvents();
 
       std::optional<event::Any> nextEvent();
 
       void display();
-      void clear(Color color = {}, Buffer buffers = Buffer::Color | Buffer::Depth);
       void close();
 
-      // TODO: move to separate entity?
-      void enable(RenderFeature feature);
-      void disable(RenderFeature feature);
-
-      [[nodiscard]] std::pair<int, int> framebufferSize() const;
-      [[nodiscard]] std::pair<int, int> size() const;
-      [[nodiscard]] GLFWwindow* nativeHandle() const noexcept;
+      [[nodiscard]] glm::ivec2 framebufferSize() const;
+      [[nodiscard]] glm::ivec2 size() const;
+      [[nodiscard]] static double elapsedTime() noexcept;
 
       void setCursorMode(CursorMode mode);
       void setStickyKeys(bool enabled);
       void setRawMouseMotion(bool enabled);
 
    private:
+      struct Impl;
+
       void setupCallbacks();
-
-      static Window& self(GLFWwindow* window);
-
-   private:
-      GLFWwindow* handle_{nullptr};
-      std::queue<event::Any> events_;
+      std::unique_ptr<Impl> impl_;
    };
 
 } // namespace etherblocks

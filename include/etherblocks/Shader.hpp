@@ -1,62 +1,37 @@
 #ifndef ETHERBLOCKS_SHADER_HPP
 #define ETHERBLOCKS_SHADER_HPP
 
-#include <glad/glad.h>
-#include <string>
+#include <etherblocks/detail/GlObject.hpp>
+#include <glm/glm.hpp>
 #include <string_view>
-#include <type_traits>
 
 namespace etherblocks {
 
-   class Object {
+   enum class ShaderType { Vertex, Fragment };
+
+   class Shader : private detail::GlObject {
    public:
-      Object(const Object&) = delete;
-      Object& operator=(const Object&) = delete;
-
-      [[nodiscard]] GLuint id() const noexcept;
-
-   protected:
-      Object() = default;
-      Object(Object&& other) noexcept;
-
-      Object& move_assign(Object&& other) noexcept;
-
-      GLuint id_{0};
-   };
-
-   class Shader : public Object {
-   public:
-      Shader(std::string_view path, GLenum type);
+      Shader(std::string_view path, ShaderType type);
       Shader(Shader&& other) noexcept;
       Shader& operator=(Shader&& other) noexcept;
       ~Shader();
 
    private:
+      friend class ShaderProgram;
+
+      [[nodiscard]] unsigned int id() const noexcept;
       void reset() noexcept;
    };
 
-   class ShaderProgram : public Object {
+   class ShaderProgram : private detail::GlObject {
    public:
       ShaderProgram(std::string_view vertexPath, std::string_view fragmentPath);
 
-      template <typename T>
-      void set(std::string_view variable, const T& value) const {
-         std::string name(variable);
-         const GLint location = glGetUniformLocation(id_, name.c_str());
-         if (location == -1) {
-            return;
-         }
-
-         using U = std::remove_cvref_t<T>;
-
-         if constexpr (std::is_same_v<U, bool> || std::is_same_v<U, int>) {
-            glUniform1i(location, static_cast<GLint>(value));
-         } else if constexpr (std::is_same_v<U, float>) {
-            glUniform1f(location, value);
-         } else {
-            static_assert(false, "Unsupported uniform type");
-         }
-      }
+      void set(std::string_view variable, bool value) const;
+      void set(std::string_view variable, int value) const;
+      void set(std::string_view variable, float value) const;
+      void set(std::string_view variable, const glm::vec4& value) const;
+      void set(std::string_view variable, const glm::mat4& value) const;
 
       ShaderProgram(ShaderProgram&& other) noexcept;
       ShaderProgram& operator=(ShaderProgram&& other) noexcept;

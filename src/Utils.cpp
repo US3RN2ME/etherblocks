@@ -5,9 +5,10 @@
 namespace etherblocks {
 
    std::string Utils::readFile(std::string_view path) {
-      std::ifstream in(path.data(), std::ios::binary);
+      const std::string filePath(path);
+      std::ifstream in(filePath, std::ios::binary);
       if (!in) {
-         std::cout << "Failed to open file: " << path << std::endl;
+         std::cout << "Failed to open file: " << path << '\n';
          return {};
       }
 
