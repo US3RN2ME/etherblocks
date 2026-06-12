@@ -21,6 +21,8 @@ namespace etherblocks::app {
 
    [[nodiscard]] std::span<const engine::graphics::VertexAttribute> meshLayout() noexcept;
    [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType);
+   [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType,
+                                                        glm::ivec3 minInclusive, glm::ivec3 maxExclusive);
    [[nodiscard]] std::array<MeshVertex, 24> buildSelectionBox(glm::ivec3 position);
 
    class CrosshairRenderer {

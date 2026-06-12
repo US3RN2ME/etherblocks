@@ -9,11 +9,11 @@ namespace etherblocks::game {
 
    enum class BlockType {
       Empty,
-      EtherCrystalBlue,
-      EtherCrystalViolet,
-      EtherGlass,
-      EtherStoneBlue,
-      EtherStoneViolet,
+      VoidCore,
+      VoidCrystal,
+      VoidGlass,
+      VoidBedrock,
+      VoidStone,
    };
 
    class World {

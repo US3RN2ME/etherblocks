@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <etherblocks/game/World.hpp>
@@ -15,6 +16,8 @@ namespace etherblocks::game {
 
    namespace {
       constexpr auto kTerrainFrequency = 0.085f;
+      constexpr auto kMaterialFrequency = 0.045f;
+      constexpr auto kVeinFrequency = 0.13f;
       constexpr auto kSeedScale = 0.013f;
 
       std::uint32_t makeSeed() {
@@ -36,12 +39,41 @@ namespace etherblocks::game {
          return 1 + static_cast<int>(normalized * static_cast<float>(maxHeight - 1));
       }
 
-      BlockType surfaceBlock(int x, int z) noexcept {
-         constexpr std::array blocks{
-             BlockType::EtherCrystalBlue, BlockType::EtherCrystalViolet, BlockType::EtherGlass,
-             BlockType::EtherStoneBlue,   BlockType::EtherStoneViolet,
-         };
-         return blocks[static_cast<std::size_t>((x / 4 + z / 4) % static_cast<int>(blocks.size()))];
+      float biomeNoise(int x, int y, int z, float frequency, std::uint32_t seed, float offset) {
+         const auto seedOffsetX = static_cast<float>(seed & 0xffffU) * kSeedScale + offset;
+         const auto seedOffsetZ = static_cast<float>((seed >> 16U) & 0xffffU) * kSeedScale - offset;
+         return stb_perlin_noise3(static_cast<float>(x) * frequency + seedOffsetX, static_cast<float>(y) * frequency * 0.65f,
+                                  static_cast<float>(z) * frequency + seedOffsetZ, 0, 0, 0);
+      }
+
+      BlockType biomeBlock(int x, int y, int z, int height, std::uint32_t seed) {
+         const auto surfaceDepth = height - 1 - y;
+         const auto broad = biomeNoise(x, y, z, kMaterialFrequency, seed, 19.0f);
+         const auto vein = std::abs(biomeNoise(x, y, z, kVeinFrequency, seed, 71.0f));
+         const auto crystalPocket = biomeNoise(x, y, z, kVeinFrequency * 0.72f, seed, 131.0f);
+
+         if (surfaceDepth == 0) {
+            if (crystalPocket > 0.48f) {
+               return BlockType::VoidCore;
+            }
+            if (vein < 0.16f) {
+               return BlockType::VoidGlass;
+            }
+            return broad > 0.0f ? BlockType::VoidStone : BlockType::VoidBedrock;
+         }
+
+         if (surfaceDepth <= 3) {
+            if (vein < 0.13f) {
+               return BlockType::VoidCrystal;
+            }
+            return broad > -0.18f ? BlockType::VoidStone : BlockType::VoidBedrock;
+         }
+
+         if (vein < 0.08f) {
+            return crystalPocket > 0.0f ? BlockType::VoidCore : BlockType::VoidCrystal;
+         }
+
+         return y < 3 ? BlockType::VoidBedrock : BlockType::VoidStone;
       }
    } // namespace
 
@@ -53,9 +85,8 @@ namespace etherblocks::game {
       for (auto z = 0; z < size_.z; ++z) {
          for (auto x = 0; x < size_.x; ++x) {
             const auto height = terrainHeight(x, z, maxTerrainHeight, seed);
-            const auto block = surfaceBlock(x, z);
             for (auto y = 0; y < height; ++y) {
-               static_cast<void>(setBlock({x, y, z}, block));
+               static_cast<void>(setBlock({x, y, z}, biomeBlock(x, y, z, height, seed)));
             }
          }
       }

@@ -1,5 +1,6 @@
 #include "SceneRendering.hpp"
 
+#include <algorithm>
 #include <cstddef>
 
 namespace etherblocks::app {
@@ -20,25 +21,26 @@ namespace etherblocks::app {
       enum class BlockFace : std::size_t { Back, Front, Left, Right, Bottom, Top };
 
       constexpr glm::vec4 rectForFace(BlockFace face) noexcept {
+         constexpr auto tileSize = 512.0f;
          switch (face) {
             case BlockFace::Back:
-               return {639.0f, 438.0f, 402.0f, 374.0f};
+               return {tileSize, tileSize, tileSize, tileSize};
             case BlockFace::Front:
-               return {213.0f, 438.0f, 401.0f, 374.0f};
+               return {0.0f, tileSize, tileSize, tileSize};
             case BlockFace::Left:
-               return {213.0f, 826.0f, 401.0f, 379.0f};
+               return {0.0f, tileSize * 2.0f, tileSize, tileSize};
             case BlockFace::Right:
-               return {639.0f, 826.0f, 402.0f, 379.0f};
+               return {tileSize, tileSize * 2.0f, tileSize, tileSize};
             case BlockFace::Bottom:
-               return {639.0f, 29.0f, 402.0f, 393.0f};
+               return {tileSize, 0.0f, tileSize, tileSize};
             case BlockFace::Top:
-               return {213.0f, 29.0f, 401.0f, 393.0f};
+               return {0.0f, 0.0f, tileSize, tileSize};
          }
-         return {213.0f, 826.0f, 401.0f, 379.0f};
+         return {0.0f, tileSize, tileSize, tileSize};
       }
 
       constexpr glm::vec2 atlasTextureCoordinate(glm::vec2 textureCoordinate, glm::vec4 rect) noexcept {
-         constexpr auto textureSize = glm::vec2{1254.0f, 1254.0f};
+         constexpr auto textureSize = glm::vec2{1024.0f, 1536.0f};
          const auto bottomLeftRectOrigin = glm::vec2{rect.x, textureSize.y - rect.y - rect.w};
          const auto pixelCoordinate = bottomLeftRectOrigin + textureCoordinate * glm::vec2{rect.z, rect.w};
          return pixelCoordinate / textureSize;
@@ -116,31 +118,44 @@ namespace etherblocks::app {
    }
 
    std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType) {
+      return buildWorldMesh(world, blockType, glm::ivec3{0}, world.size());
+   }
+
+   std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType, glm::ivec3 minInclusive,
+                                          glm::ivec3 maxExclusive) {
       std::vector<MeshVertex> vertices;
       const auto size = world.size();
-      vertices.reserve(static_cast<std::size_t>(size.x) * static_cast<std::size_t>(size.y) * static_cast<std::size_t>(size.z) *
-                       kCubeFaces.size() * 6);
+      minInclusive = glm::clamp(minInclusive, glm::ivec3{0}, size);
+      maxExclusive = glm::clamp(maxExclusive, minInclusive, size);
+      const auto regionSize = maxExclusive - minInclusive;
+      vertices.reserve(static_cast<std::size_t>(regionSize.x) * static_cast<std::size_t>(regionSize.y) *
+                       static_cast<std::size_t>(regionSize.z) * kCubeFaces.size() * 6);
 
-      world.forEachBlock([&](glm::ivec3 position, game::BlockType block) {
-         if (block != blockType) {
-            return;
-         }
+      for (auto y = minInclusive.y; y < maxExclusive.y; ++y) {
+         for (auto z = minInclusive.z; z < maxExclusive.z; ++z) {
+            for (auto x = minInclusive.x; x < maxExclusive.x; ++x) {
+               const glm::ivec3 position{x, y, z};
+               if (world.block(position) != blockType) {
+                  continue;
+               }
 
-         for (std::size_t faceIndex = 0; faceIndex < kCubeFaces.size(); ++faceIndex) {
-            if (world.isSolid(position + kNeighborOffsets[faceIndex])) {
-               continue;
+               for (std::size_t faceIndex = 0; faceIndex < kCubeFaces.size(); ++faceIndex) {
+                  if (world.isSolid(position + kNeighborOffsets[faceIndex])) {
+                     continue;
+                  }
+
+                  const auto face = static_cast<BlockFace>(faceIndex);
+                  for (const auto& vertex : kCubeFaces[faceIndex].vertices) {
+                     vertices.push_back({
+                         glm::vec3(position) + glm::vec3{vertex[0], vertex[1], vertex[2]},
+                         atlasTextureCoordinate({vertex[3], vertex[4]}, rectForFace(face)),
+                         normalForFace(face),
+                     });
+                  }
+               }
             }
-
-            const auto face = static_cast<BlockFace>(faceIndex);
-            for (const auto& vertex : kCubeFaces[faceIndex].vertices) {
-               vertices.push_back({
-                   glm::vec3(position) + glm::vec3{vertex[0], vertex[1], vertex[2]},
-                   atlasTextureCoordinate({vertex[3], vertex[4]}, rectForFace(face)),
-                   normalForFace(face),
-               });
-            }
          }
-      });
+      }
       return vertices;
    }
 
