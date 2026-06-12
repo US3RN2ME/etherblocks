@@ -26,6 +26,12 @@ namespace etherblocks::app {
 
       constexpr auto kWindowSize = glm::ivec2{800, 600};
       constexpr auto kInteractionRange = 8.0f;
+      constexpr auto kSkyLight = glm::vec4{1.08f, 1.14f, 1.2f, 1.0f};
+      constexpr auto kGroundLight = glm::vec4{0.42f, 0.46f, 0.52f, 1.0f};
+      constexpr auto kSkyColor = graphics::Color{0.11f, 0.18f, 0.24f, 1.0f};
+      constexpr auto kFogColor = glm::vec4{kSkyColor.r, kSkyColor.g, kSkyColor.b, kSkyColor.a};
+      constexpr auto kFogStart = 16.0f;
+      constexpr auto kFogEnd = 29.0f;
 
       template <typename... Ts>
       struct Overloaded : Ts... {
@@ -41,19 +47,31 @@ namespace etherblocks::app {
       Impl()
           : window_({kWindowSize, "etherblocks"})
           , player_({0.0f, 3.0f, 3.0f})
-          , worldMesh_(sizeof(MeshVertex), meshLayout())
+          , etherCrystalBlueMesh_(sizeof(MeshVertex), meshLayout())
+          , etherCrystalVioletMesh_(sizeof(MeshVertex), meshLayout())
+          , etherGlassMesh_(sizeof(MeshVertex), meshLayout())
+          , etherStoneBlueMesh_(sizeof(MeshVertex), meshLayout())
+          , etherStoneVioletMesh_(sizeof(MeshVertex), meshLayout())
           , selectionMesh_(sizeof(MeshVertex), meshLayout())
           , worldMaterial_("./shaders/basic.vertex.glsl", "./shaders/basic.fragment.glsl")
-          , worldTexture_("./assets/container.png") {
+          , etherCrystalBlueTexture_("./assets/blocks/ether_crystal_blue.png")
+          , etherCrystalVioletTexture_("./assets/blocks/ether_crystal_violet.png")
+          , etherGlassTexture_("./assets/blocks/ether_glass.png")
+          , etherStoneBlueTexture_("./assets/blocks/ether_stone_blue.png")
+          , etherStoneVioletTexture_("./assets/blocks/ether_stone_violet.png") {
          renderer_.setViewport(window_.framebufferSize());
          renderer_.enable(graphics::RenderFeature::DepthTest);
          renderer_.enable(graphics::RenderFeature::ProgramPointSize);
          window_.setCursorMode(sys::CursorMode::Disabled);
          window_.setRawMouseMotion(true);
 
-         worldMaterial_.setTexture(worldTexture_);
          worldMaterial_.shader().set("uTexture", 0);
          worldMaterial_.shader().set("uModel", glm::mat4{1.0f});
+         worldMaterial_.shader().set("uSkyLight", kSkyLight);
+         worldMaterial_.shader().set("uGroundLight", kGroundLight);
+         worldMaterial_.shader().set("uFogColor", kFogColor);
+         worldMaterial_.shader().set("uFogStart", kFogStart);
+         worldMaterial_.shader().set("uFogEnd", kFogEnd);
          rebuildWorldMesh();
          sys::log(sys::LogLevel::Info, "Application initialized");
       }
@@ -95,6 +113,21 @@ namespace etherblocks::app {
          if (input.isKeyPressed(sys::Key::Escape)) {
             window_.close();
          }
+         if (input.isKeyPressed(sys::Key::Num1)) {
+            selectedBuildBlock_ = game::BlockType::EtherCrystalBlue;
+         }
+         if (input.isKeyPressed(sys::Key::Num2)) {
+            selectedBuildBlock_ = game::BlockType::EtherCrystalViolet;
+         }
+         if (input.isKeyPressed(sys::Key::Num3)) {
+            selectedBuildBlock_ = game::BlockType::EtherGlass;
+         }
+         if (input.isKeyPressed(sys::Key::Num4)) {
+            selectedBuildBlock_ = game::BlockType::EtherStoneBlue;
+         }
+         if (input.isKeyPressed(sys::Key::Num5)) {
+            selectedBuildBlock_ = game::BlockType::EtherStoneViolet;
+         }
 
          player_.update(input, deltaTime, [this](glm::ivec3 position) {
             return world_.isSolid(position);
@@ -122,7 +155,7 @@ namespace etherblocks::app {
          if (input.isMouseButtonPressed(sys::MouseButton::Left)) {
             const auto position = selectedBlock_->voxel + selectedBlock_->normal;
             if (!player_.occupiesVoxel(position)) {
-               worldMeshDirty_ |= world_.setBlock(position, game::BlockType::Basic);
+               worldMeshDirty_ |= world_.setBlock(position, selectedBuildBlock_);
             }
          }
          if (input.isMouseButtonPressed(sys::MouseButton::Right)) {
@@ -134,18 +167,36 @@ namespace etherblocks::app {
       }
 
       void rebuildWorldMesh() {
-         const auto vertices = buildWorldMesh(world_);
-         worldMesh_.upload(std::span{vertices}, graphics::BufferUsage::DynamicDraw);
+         auto vertices = buildWorldMesh(world_, game::BlockType::EtherCrystalBlue);
+         etherCrystalBlueMesh_.upload(std::span<const MeshVertex>{vertices}, graphics::BufferUsage::DynamicDraw);
+
+         vertices = buildWorldMesh(world_, game::BlockType::EtherCrystalViolet);
+         etherCrystalVioletMesh_.upload(std::span<const MeshVertex>{vertices}, graphics::BufferUsage::DynamicDraw);
+
+         vertices = buildWorldMesh(world_, game::BlockType::EtherGlass);
+         etherGlassMesh_.upload(std::span<const MeshVertex>{vertices}, graphics::BufferUsage::DynamicDraw);
+
+         vertices = buildWorldMesh(world_, game::BlockType::EtherStoneBlue);
+         etherStoneBlueMesh_.upload(std::span<const MeshVertex>{vertices}, graphics::BufferUsage::DynamicDraw);
+
+         vertices = buildWorldMesh(world_, game::BlockType::EtherStoneViolet);
+         etherStoneVioletMesh_.upload(std::span<const MeshVertex>{vertices}, graphics::BufferUsage::DynamicDraw);
          worldMeshDirty_ = false;
       }
 
       void render() {
-         renderer_.clear({0.2f, 0.3f, 0.3f, 1.0f}, graphics::ClearBuffer::Color | graphics::ClearBuffer::Depth);
+         renderer_.clear(kSkyColor, graphics::ClearBuffer::Color | graphics::ClearBuffer::Depth);
 
          worldMaterial_.shader().set("uView", player_.camera().createViewMatrix());
          worldMaterial_.shader().set("uProjection", createProjectionMatrix());
+         const auto cameraPosition = player_.camera().position();
+         worldMaterial_.shader().set("uCameraPosition", glm::vec4{cameraPosition, 1.0f});
          worldMaterial_.shader().set("uUseOverrideColor", false);
-         renderer_.draw(worldMesh_, worldMaterial_);
+         drawWorldMesh(etherCrystalBlueMesh_, etherCrystalBlueTexture_);
+         drawWorldMesh(etherCrystalVioletMesh_, etherCrystalVioletTexture_);
+         drawWorldMesh(etherGlassMesh_, etherGlassTexture_);
+         drawWorldMesh(etherStoneBlueMesh_, etherStoneBlueTexture_);
+         drawWorldMesh(etherStoneVioletMesh_, etherStoneVioletTexture_);
 
          if (selectedBlock_) {
             drawSelectionBox(selectedBlock_->voxel);
@@ -154,6 +205,11 @@ namespace etherblocks::app {
          renderer_.disable(graphics::RenderFeature::DepthTest);
          crosshair_.draw(renderer_);
          renderer_.enable(graphics::RenderFeature::DepthTest);
+      }
+
+      void drawWorldMesh(const graphics::Mesh& mesh, const graphics::Texture& texture) {
+         worldMaterial_.setTexture(texture);
+         renderer_.draw(mesh, worldMaterial_);
       }
 
       [[nodiscard]] glm::mat4 createProjectionMatrix() const {
@@ -177,12 +233,21 @@ namespace etherblocks::app {
       sys::FrameClock clock_;
       glm::ivec2 screenSize_{kWindowSize};
       game::World world_;
-      graphics::Mesh worldMesh_;
+      graphics::Mesh etherCrystalBlueMesh_;
+      graphics::Mesh etherCrystalVioletMesh_;
+      graphics::Mesh etherGlassMesh_;
+      graphics::Mesh etherStoneBlueMesh_;
+      graphics::Mesh etherStoneVioletMesh_;
       graphics::Mesh selectionMesh_;
       graphics::Material worldMaterial_;
-      graphics::Texture worldTexture_;
+      graphics::Texture etherCrystalBlueTexture_;
+      graphics::Texture etherCrystalVioletTexture_;
+      graphics::Texture etherGlassTexture_;
+      graphics::Texture etherStoneBlueTexture_;
+      graphics::Texture etherStoneVioletTexture_;
       CrosshairRenderer crosshair_;
       std::optional<game::RayHit> selectedBlock_;
+      game::BlockType selectedBuildBlock_{game::BlockType::EtherCrystalBlue};
       bool worldMeshDirty_{true};
    };
 

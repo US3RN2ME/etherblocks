@@ -11,7 +11,13 @@ namespace etherblocks::game {
        , blocks_(static_cast<std::size_t>(size_.x) * static_cast<std::size_t>(size_.y) * static_cast<std::size_t>(size_.z)) {
       for (auto z = 0; z < size_.z; ++z) {
          for (auto x = 0; x < size_.x; ++x) {
-            static_cast<void>(setBlock({x, 0, z}, BlockType::Basic));
+            const auto selector = (x / 4 + z / 4) % 5;
+            const auto block = selector == 0   ? BlockType::EtherCrystalBlue
+                               : selector == 1 ? BlockType::EtherCrystalViolet
+                               : selector == 2 ? BlockType::EtherGlass
+                               : selector == 3 ? BlockType::EtherStoneBlue
+                                               : BlockType::EtherStoneViolet;
+            static_cast<void>(setBlock({x, 0, z}, block));
          }
       }
       system::log(system::LogLevel::Info, "World initialized: " + std::to_string(size_.x) + "x" + std::to_string(size_.y) +

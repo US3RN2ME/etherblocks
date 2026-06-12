@@ -16,10 +16,11 @@ namespace etherblocks::app {
    struct MeshVertex {
       glm::vec3 position{};
       glm::vec2 textureCoordinate{};
+      glm::vec3 normal{0.0f, 1.0f, 0.0f};
    };
 
    [[nodiscard]] std::span<const engine::graphics::VertexAttribute> meshLayout() noexcept;
-   [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world);
+   [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType);
    [[nodiscard]] std::array<MeshVertex, 24> buildSelectionBox(glm::ivec3 position);
 
    class CrosshairRenderer {

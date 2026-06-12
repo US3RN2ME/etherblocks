@@ -1,0 +1,88 @@
+{
+  "textureSize": [
+    1254,
+    1254
+  ],
+  "layout": "six_faces_2x3",
+  "faceTiles": {
+    "top": [
+      0,
+      0
+    ],
+    "bottom": [
+      1,
+      0
+    ],
+    "left": [
+      0,
+      1
+    ],
+    "right": [
+      1,
+      1
+    ],
+    "front": [
+      0,
+      2
+    ],
+    "back": [
+      1,
+      2
+    ]
+  },
+  "tileRects": [
+    [
+      213,
+      29,
+      401,
+      393
+    ],
+    [
+      639,
+      29,
+      402,
+      393
+    ],
+    [
+      213,
+      438,
+      401,
+      374
+    ],
+    [
+      639,
+      438,
+      402,
+      374
+    ],
+    [
+      213,
+      826,
+      401,
+      379
+    ],
+    [
+      639,
+      826,
+      402,
+      379
+    ]
+  ],
+  "blocks": {
+    "ether_crystal_blue": {
+      "file": "assets/blocks/ether_crystal_blue.png"
+    },
+    "ether_crystal_violet": {
+      "file": "assets/blocks/ether_crystal_violet.png"
+    },
+    "ether_glass": {
+      "file": "assets/blocks/ether_glass.png"
+    },
+    "ether_stone_blue": {
+      "file": "assets/blocks/ether_stone_blue.png"
+    },
+    "ether_stone_violet": {
+      "file": "assets/blocks/ether_stone_violet.png"
+    }
+  }
+}

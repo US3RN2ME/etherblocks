@@ -7,7 +7,14 @@
 
 namespace etherblocks::game {
 
-   enum class BlockType { Empty, Basic };
+   enum class BlockType {
+      Empty,
+      EtherCrystalBlue,
+      EtherCrystalViolet,
+      EtherGlass,
+      EtherStoneBlue,
+      EtherStoneViolet,
+   };
 
    class World {
    public:

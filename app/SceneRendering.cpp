@@ -10,11 +10,56 @@ namespace etherblocks::app {
       constexpr std::array kMeshLayout{
           graphics::VertexAttribute{0, 3, graphics::VertexAttributeType::Float, false, offsetof(MeshVertex, position)},
           graphics::VertexAttribute{1, 2, graphics::VertexAttributeType::Float, false, offsetof(MeshVertex, textureCoordinate)},
+          graphics::VertexAttribute{2, 3, graphics::VertexAttributeType::Float, false, offsetof(MeshVertex, normal)},
       };
 
       struct FaceDefinition {
          float vertices[6][5];
       };
+
+      enum class BlockFace : std::size_t { Back, Front, Left, Right, Bottom, Top };
+
+      constexpr glm::vec4 rectForFace(BlockFace face) noexcept {
+         switch (face) {
+            case BlockFace::Back:
+               return {639.0f, 826.0f, 402.0f, 379.0f};
+            case BlockFace::Front:
+               return {213.0f, 826.0f, 401.0f, 379.0f};
+            case BlockFace::Left:
+               return {213.0f, 438.0f, 401.0f, 374.0f};
+            case BlockFace::Right:
+               return {639.0f, 438.0f, 402.0f, 374.0f};
+            case BlockFace::Bottom:
+               return {639.0f, 29.0f, 402.0f, 393.0f};
+            case BlockFace::Top:
+               return {213.0f, 29.0f, 401.0f, 393.0f};
+         }
+         return {213.0f, 826.0f, 401.0f, 379.0f};
+      }
+
+      constexpr glm::vec2 atlasTextureCoordinate(glm::vec2 textureCoordinate, glm::vec4 rect) noexcept {
+         constexpr auto textureSize = glm::vec2{1254.0f, 1254.0f};
+         const auto pixelCoordinate = glm::vec2{rect.x, rect.y} + textureCoordinate * glm::vec2{rect.z, rect.w};
+         return pixelCoordinate / textureSize;
+      }
+
+      constexpr glm::vec3 normalForFace(BlockFace face) noexcept {
+         switch (face) {
+            case BlockFace::Back:
+               return {0.0f, 0.0f, -1.0f};
+            case BlockFace::Front:
+               return {0.0f, 0.0f, 1.0f};
+            case BlockFace::Left:
+               return {-1.0f, 0.0f, 0.0f};
+            case BlockFace::Right:
+               return {1.0f, 0.0f, 0.0f};
+            case BlockFace::Bottom:
+               return {0.0f, -1.0f, 0.0f};
+            case BlockFace::Top:
+               return {0.0f, 1.0f, 0.0f};
+         }
+         return {0.0f, 1.0f, 0.0f};
+      }
 
       constexpr std::array<FaceDefinition, 6> kCubeFaces{{
           {{{-0.5f, -0.5f, -0.5f, 0, 0},
@@ -69,14 +114,14 @@ namespace etherblocks::app {
       return kMeshLayout;
    }
 
-   std::vector<MeshVertex> buildWorldMesh(const game::World& world) {
+   std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType) {
       std::vector<MeshVertex> vertices;
       const auto size = world.size();
       vertices.reserve(static_cast<std::size_t>(size.x) * static_cast<std::size_t>(size.y) * static_cast<std::size_t>(size.z) *
                        kCubeFaces.size() * 6);
 
       world.forEachBlock([&](glm::ivec3 position, game::BlockType block) {
-         if (block == game::BlockType::Empty) {
+         if (block != blockType) {
             return;
          }
 
@@ -85,10 +130,12 @@ namespace etherblocks::app {
                continue;
             }
 
+            const auto face = static_cast<BlockFace>(faceIndex);
             for (const auto& vertex : kCubeFaces[faceIndex].vertices) {
                vertices.push_back({
                    glm::vec3(position) + glm::vec3{vertex[0], vertex[1], vertex[2]},
-                   {vertex[3], vertex[4]},
+                   atlasTextureCoordinate({vertex[3], vertex[4]}, rectForFace(face)),
+                   normalForFace(face),
                });
             }
          }

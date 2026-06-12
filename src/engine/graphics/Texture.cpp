@@ -55,6 +55,7 @@ namespace etherblocks::engine::graphics {
    } // namespace
 
    Texture::Texture(std::string_view path) {
+      const std::string filePath(path);
       TextureGuard texture;
       glGenTextures(1, &texture.id);
       if (texture.id == 0) {
@@ -64,14 +65,13 @@ namespace etherblocks::engine::graphics {
       glBindTexture(GL_TEXTURE_2D, texture.id);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
       stbi_set_flip_vertically_on_load(1);
       int width = 0;
       int height = 0;
       int channelCount = 0;
-      const std::string filePath(path);
       const std::unique_ptr<stbi_uc, decltype(&stbi_image_free)> data{
           stbi_load(filePath.c_str(), &width, &height, &channelCount, 0), &stbi_image_free};
       if (data == nullptr) {
@@ -80,7 +80,6 @@ namespace etherblocks::engine::graphics {
          system::log(system::LogLevel::Error, message);
          throw std::runtime_error{message};
       }
-
       PixelFormat pixelFormatValue;
       try {
          pixelFormatValue = pixelFormat(channelCount);
@@ -89,6 +88,7 @@ namespace etherblocks::engine::graphics {
          throw;
       }
       const auto format = toGl(pixelFormatValue);
+      glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
       glTexImage2D(GL_TEXTURE_2D, 0, static_cast<int>(format), width, height, 0, format, GL_UNSIGNED_BYTE, data.get());
       glGenerateMipmap(GL_TEXTURE_2D);
       id_ = texture.release();
