@@ -1,27 +1,66 @@
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <etherblocks/game/World.hpp>
 #include <etherblocks/system/Logger.hpp>
+#include <random>
 #include <string>
 
+#define STB_PERLIN_IMPLEMENTATION
+#include <stb_perlin.h>
+
 namespace etherblocks::game {
+
+   namespace {
+      constexpr auto kTerrainFrequency = 0.085f;
+      constexpr auto kSeedScale = 0.013f;
+
+      std::uint32_t makeSeed() {
+         std::random_device random;
+         const auto timeSeed = static_cast<std::uint32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+         return random() ^ (timeSeed + 0x9e3779b9U);
+      }
+
+      int terrainHeight(int x, int z, int maxHeight, std::uint32_t seed) {
+         if (maxHeight <= 1) {
+            return 1;
+         }
+
+         const auto seedOffsetX = static_cast<float>(seed & 0xffffU) * kSeedScale;
+         const auto seedOffsetZ = static_cast<float>((seed >> 16U) & 0xffffU) * kSeedScale;
+         const auto noise = stb_perlin_noise3(static_cast<float>(x) * kTerrainFrequency + seedOffsetX, 0.0f,
+                                              static_cast<float>(z) * kTerrainFrequency + seedOffsetZ, 0, 0, 0);
+         const auto normalized = std::clamp(noise * 0.5f + 0.5f, 0.0f, 1.0f);
+         return 1 + static_cast<int>(normalized * static_cast<float>(maxHeight - 1));
+      }
+
+      BlockType surfaceBlock(int x, int z) noexcept {
+         constexpr std::array blocks{
+             BlockType::EtherCrystalBlue, BlockType::EtherCrystalViolet, BlockType::EtherGlass,
+             BlockType::EtherStoneBlue,   BlockType::EtherStoneViolet,
+         };
+         return blocks[static_cast<std::size_t>((x / 4 + z / 4) % static_cast<int>(blocks.size()))];
+      }
+   } // namespace
 
    World::World(glm::ivec3 size)
        : size_(glm::max(size, glm::ivec3{0}))
        , blocks_(static_cast<std::size_t>(size_.x) * static_cast<std::size_t>(size_.y) * static_cast<std::size_t>(size_.z)) {
+      const auto seed = makeSeed();
+      const auto maxTerrainHeight = std::max(1, size_.y - 2);
       for (auto z = 0; z < size_.z; ++z) {
          for (auto x = 0; x < size_.x; ++x) {
-            const auto selector = (x / 4 + z / 4) % 5;
-            const auto block = selector == 0   ? BlockType::EtherCrystalBlue
-                               : selector == 1 ? BlockType::EtherCrystalViolet
-                               : selector == 2 ? BlockType::EtherGlass
-                               : selector == 3 ? BlockType::EtherStoneBlue
-                                               : BlockType::EtherStoneViolet;
-            static_cast<void>(setBlock({x, 0, z}, block));
+            const auto height = terrainHeight(x, z, maxTerrainHeight, seed);
+            const auto block = surfaceBlock(x, z);
+            for (auto y = 0; y < height; ++y) {
+               static_cast<void>(setBlock({x, y, z}, block));
+            }
          }
       }
       system::log(system::LogLevel::Info, "World initialized: " + std::to_string(size_.x) + "x" + std::to_string(size_.y) +
-                                              "x" + std::to_string(size_.z));
+                                              "x" + std::to_string(size_.z) + ", seed=" + std::to_string(seed));
    }
 
    bool World::setBlock(glm::ivec3 position, BlockType block) noexcept {

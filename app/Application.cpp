@@ -173,7 +173,6 @@ namespace etherblocks::app {
          worldMaterial_.shader().set("uFogColor", kFogColor);
          worldMaterial_.shader().set("uFogStart", kFogStart);
          worldMaterial_.shader().set("uFogEnd", kFogEnd);
-         static_cast<void>(loadWorld(world_, kWorldSavePath));
          rebuildWorldMesh();
          sys::log(sys::LogLevel::Info, "Application initialized");
       }

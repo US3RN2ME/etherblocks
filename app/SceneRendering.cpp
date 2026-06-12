@@ -22,13 +22,13 @@ namespace etherblocks::app {
       constexpr glm::vec4 rectForFace(BlockFace face) noexcept {
          switch (face) {
             case BlockFace::Back:
-               return {639.0f, 826.0f, 402.0f, 379.0f};
-            case BlockFace::Front:
-               return {213.0f, 826.0f, 401.0f, 379.0f};
-            case BlockFace::Left:
-               return {213.0f, 438.0f, 401.0f, 374.0f};
-            case BlockFace::Right:
                return {639.0f, 438.0f, 402.0f, 374.0f};
+            case BlockFace::Front:
+               return {213.0f, 438.0f, 401.0f, 374.0f};
+            case BlockFace::Left:
+               return {213.0f, 826.0f, 401.0f, 379.0f};
+            case BlockFace::Right:
+               return {639.0f, 826.0f, 402.0f, 379.0f};
             case BlockFace::Bottom:
                return {639.0f, 29.0f, 402.0f, 393.0f};
             case BlockFace::Top:
@@ -39,7 +39,8 @@ namespace etherblocks::app {
 
       constexpr glm::vec2 atlasTextureCoordinate(glm::vec2 textureCoordinate, glm::vec4 rect) noexcept {
          constexpr auto textureSize = glm::vec2{1254.0f, 1254.0f};
-         const auto pixelCoordinate = glm::vec2{rect.x, rect.y} + textureCoordinate * glm::vec2{rect.z, rect.w};
+         const auto bottomLeftRectOrigin = glm::vec2{rect.x, textureSize.y - rect.y - rect.w};
+         const auto pixelCoordinate = bottomLeftRectOrigin + textureCoordinate * glm::vec2{rect.z, rect.w};
          return pixelCoordinate / textureSize;
       }
 
@@ -74,18 +75,18 @@ namespace etherblocks::app {
             {0.5f, 0.5f, 0.5f, 1, 1},
             {-0.5f, 0.5f, 0.5f, 0, 1},
             {-0.5f, -0.5f, 0.5f, 0, 0}}},
-          {{{-0.5f, 0.5f, 0.5f, 1, 0},
+          {{{-0.5f, 0.5f, 0.5f, 0, 1},
             {-0.5f, 0.5f, -0.5f, 1, 1},
-            {-0.5f, -0.5f, -0.5f, 0, 1},
-            {-0.5f, -0.5f, -0.5f, 0, 1},
+            {-0.5f, -0.5f, -0.5f, 1, 0},
+            {-0.5f, -0.5f, -0.5f, 1, 0},
             {-0.5f, -0.5f, 0.5f, 0, 0},
-            {-0.5f, 0.5f, 0.5f, 1, 0}}},
-          {{{0.5f, 0.5f, 0.5f, 1, 0},
-            {0.5f, 0.5f, -0.5f, 1, 1},
-            {0.5f, -0.5f, -0.5f, 0, 1},
-            {0.5f, -0.5f, -0.5f, 0, 1},
-            {0.5f, -0.5f, 0.5f, 0, 0},
-            {0.5f, 0.5f, 0.5f, 1, 0}}},
+            {-0.5f, 0.5f, 0.5f, 0, 1}}},
+          {{{0.5f, 0.5f, 0.5f, 1, 1},
+            {0.5f, 0.5f, -0.5f, 0, 1},
+            {0.5f, -0.5f, -0.5f, 0, 0},
+            {0.5f, -0.5f, -0.5f, 0, 0},
+            {0.5f, -0.5f, 0.5f, 1, 0},
+            {0.5f, 0.5f, 0.5f, 1, 1}}},
           {{{-0.5f, -0.5f, -0.5f, 0, 1},
             {0.5f, -0.5f, -0.5f, 1, 1},
             {0.5f, -0.5f, 0.5f, 1, 0},
