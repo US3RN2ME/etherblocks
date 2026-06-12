@@ -1,5 +1,7 @@
 #include "Application.hpp"
 
+#include <array>
+#include <cstdint>
 #include <etherblocks/engine/graphics/Material.hpp>
 #include <etherblocks/engine/graphics/Mesh.hpp>
 #include <etherblocks/engine/graphics/Renderer.hpp>
@@ -11,9 +13,12 @@
 #include <etherblocks/system/Input.hpp>
 #include <etherblocks/system/Logger.hpp>
 #include <etherblocks/system/Window.hpp>
+#include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <optional>
 #include <span>
+#include <string>
+#include <string_view>
 #include <variant>
 
 #include "SceneRendering.hpp"
@@ -32,6 +37,8 @@ namespace etherblocks::app {
       constexpr auto kFogColor = glm::vec4{kSkyColor.r, kSkyColor.g, kSkyColor.b, kSkyColor.a};
       constexpr auto kFogStart = 16.0f;
       constexpr auto kFogEnd = 29.0f;
+      constexpr std::string_view kWorldSavePath = "./world.ebw";
+      constexpr std::array<char, 4> kWorldSaveMagic{'E', 'B', 'W', '2'};
 
       template <typename... Ts>
       struct Overloaded : Ts... {
@@ -40,6 +47,100 @@ namespace etherblocks::app {
 
       template <typename... Ts>
       Overloaded(Ts...) -> Overloaded<Ts...>;
+
+      std::uint8_t encodeBlock(game::BlockType block) noexcept {
+         return std::to_underlying(block);
+      }
+
+      std::optional<game::BlockType> decodeBlock(std::uint8_t value) noexcept {
+         switch (value) {
+            case 0:
+               return game::BlockType::Empty;
+            case 1:
+               return game::BlockType::EtherCrystalBlue;
+            case 2:
+               return game::BlockType::EtherCrystalViolet;
+            case 3:
+               return game::BlockType::EtherGlass;
+            case 4:
+               return game::BlockType::EtherStoneBlue;
+            case 5:
+               return game::BlockType::EtherStoneViolet;
+            default:
+               return {};
+         }
+      }
+
+      bool saveWorld(const game::World& world, std::string_view path) {
+         std::ofstream file{std::string(path), std::ios::binary};
+         if (!file) {
+            sys::log(sys::LogLevel::Error, "Failed to open world save for writing: " + std::string(path));
+            return false;
+         }
+
+         const auto size = world.size();
+         const std::array<std::int32_t, 3> dimensions{size.x, size.y, size.z};
+         const auto blockCount = static_cast<std::uint32_t>(size.x * size.y * size.z);
+
+         file.write(kWorldSaveMagic.data(), kWorldSaveMagic.size());
+         file.write(reinterpret_cast<const char*>(dimensions.data()), sizeof(dimensions));
+         file.write(reinterpret_cast<const char*>(&blockCount), sizeof(blockCount));
+
+         world.forEachBlock([&](glm::ivec3, game::BlockType block) {
+            const auto value = encodeBlock(block);
+            file.write(reinterpret_cast<const char*>(&value), sizeof(value));
+         });
+
+         if (!file) {
+            sys::log(sys::LogLevel::Error, "Failed while writing world save: " + std::string(path));
+            return false;
+         }
+
+         sys::log(sys::LogLevel::Info, "World saved: " + std::string(path));
+         return true;
+      }
+
+      bool loadWorld(game::World& world, std::string_view path) {
+         std::ifstream file{std::string(path), std::ios::binary};
+         if (!file) {
+            sys::log(sys::LogLevel::Info, "No world save found: " + std::string(path));
+            return false;
+         }
+
+         std::array<char, 4> magic{};
+         std::array<std::int32_t, 3> dimensions{};
+         std::uint32_t blockCount{};
+         file.read(magic.data(), magic.size());
+         file.read(reinterpret_cast<char*>(dimensions.data()), sizeof(dimensions));
+         file.read(reinterpret_cast<char*>(&blockCount), sizeof(blockCount));
+
+         const auto size = world.size();
+         const auto expectedBlockCount = static_cast<std::uint32_t>(size.x * size.y * size.z);
+         if (!file || magic != kWorldSaveMagic || dimensions != std::array<std::int32_t, 3>{size.x, size.y, size.z} ||
+             blockCount != expectedBlockCount) {
+            sys::log(sys::LogLevel::Warning, "World save is incompatible or corrupt: " + std::string(path));
+            return false;
+         }
+
+         for (auto y = 0; y < size.y; ++y) {
+            for (auto z = 0; z < size.z; ++z) {
+               for (auto x = 0; x < size.x; ++x) {
+                  std::uint8_t value{};
+                  file.read(reinterpret_cast<char*>(&value), sizeof(value));
+                  const auto block = decodeBlock(value);
+                  if (!file || !block) {
+                     sys::log(sys::LogLevel::Warning,
+                              "World save ended unexpectedly or contains an unknown block: " + std::string(path));
+                     return false;
+                  }
+                  static_cast<void>(world.setBlock({x, y, z}, *block));
+               }
+            }
+         }
+
+         sys::log(sys::LogLevel::Info, "World loaded: " + std::string(path));
+         return true;
+      }
    } // namespace
 
    class Application::Impl {
@@ -72,6 +173,7 @@ namespace etherblocks::app {
          worldMaterial_.shader().set("uFogColor", kFogColor);
          worldMaterial_.shader().set("uFogStart", kFogStart);
          worldMaterial_.shader().set("uFogEnd", kFogEnd);
+         static_cast<void>(loadWorld(world_, kWorldSavePath));
          rebuildWorldMesh();
          sys::log(sys::LogLevel::Info, "Application initialized");
       }
@@ -112,6 +214,15 @@ namespace etherblocks::app {
          const auto& input = window_.input();
          if (input.isKeyPressed(sys::Key::Escape)) {
             window_.close();
+         }
+         if (input.isKeyPressed(sys::Key::F5)) {
+            static_cast<void>(saveWorld(world_, kWorldSavePath));
+         }
+         if (input.isKeyPressed(sys::Key::F9)) {
+            if (loadWorld(world_, kWorldSavePath)) {
+               worldMeshDirty_ = true;
+               selectedBlock_ = findSelectedBlock();
+            }
          }
          if (input.isKeyPressed(sys::Key::Num1)) {
             selectedBuildBlock_ = game::BlockType::EtherCrystalBlue;
