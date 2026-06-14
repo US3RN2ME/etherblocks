@@ -19,6 +19,7 @@ namespace etherblocks::engine {
 
       void draw(const graphics::Renderer& renderer, graphics::Material& material,
                 const std::array<const graphics::Texture*, 5>& textures, glm::vec3 cameraPosition, float viewDistance);
+      void reset(int chunkSize);
       void markDirty(glm::ivec3 blockPosition);
       void markAllDirty();
 
@@ -36,6 +37,7 @@ namespace etherblocks::engine {
       [[nodiscard]] glm::ivec3 chunkMin(const Chunk& chunk) const noexcept;
       [[nodiscard]] glm::ivec3 chunkMax(const Chunk& chunk) const noexcept;
       [[nodiscard]] bool isVisible(const Chunk& chunk, glm::vec3 cameraPosition, float viewDistance) const noexcept;
+      void rebuildGrid();
       void markDirty(glm::ivec2 chunk);
       void rebuild(Chunk& chunk);
 

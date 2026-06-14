@@ -5,8 +5,6 @@
 namespace etherblocks::engine {
 
    namespace {
-      namespace graphics = etherblocks::engine::graphics;
-
       [[nodiscard]] int ceilDiv(int value, int divisor) noexcept {
          return (value + divisor - 1) / divisor;
       }
@@ -43,8 +41,18 @@ namespace etherblocks::engine {
    WorldChunks::WorldChunks(game::World& world, int chunkSize)
        : world_(world)
        , chunkSize_(std::max(chunkSize, 1)) {
+      rebuildGrid();
+   }
+
+   void WorldChunks::reset(int chunkSize) {
+      chunkSize_ = std::max(chunkSize, 1);
+      rebuildGrid();
+   }
+
+   void WorldChunks::rebuildGrid() {
       const auto size = world_.size();
       gridSize_ = {ceilDiv(size.x, chunkSize_), ceilDiv(size.z, chunkSize_)};
+      chunks_.clear();
       chunks_.reserve(static_cast<std::size_t>(gridSize_.x * gridSize_.y));
       for (auto chunkZ = 0; chunkZ < gridSize_.y; ++chunkZ) {
          for (auto chunkX = 0; chunkX < gridSize_.x; ++chunkX) {

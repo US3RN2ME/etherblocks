@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <etherblocks/engine/WorldChunks.hpp>
 #include <etherblocks/engine/WorldRendering.hpp>
 #include <etherblocks/engine/graphics/Material.hpp>
@@ -15,11 +16,13 @@
 #include <etherblocks/system/Input.hpp>
 #include <etherblocks/system/Logger.hpp>
 #include <etherblocks/system/Window.hpp>
+#include <future>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -39,6 +42,8 @@ namespace etherblocks::app {
       using engine::meshLayout;
       using engine::MeshVertex;
       using engine::WorldChunks;
+
+      const auto kLoadingWorldSize = glm::ivec3{1, 1, 1};
 
       template <typename... Ts>
       struct Overloaded : Ts... {
@@ -61,6 +66,23 @@ namespace etherblocks::app {
          }
          return {static_cast<float>(x), spawnY, static_cast<float>(z)};
       }
+
+      struct WorldLoadResult {
+         int worldIndex{};
+         game::World world;
+         game::Player player;
+         bool loadedFromDisk{};
+      };
+
+      [[nodiscard]] WorldLoadResult loadWorldInBackground(int worldIndex, glm::ivec3 worldSize, WorldInfo worldInfo) {
+         auto loadedWorld = game::World(worldSize);
+         const auto loadedFromDisk = loadWorld(loadedWorld, worldInfo.savePath);
+         auto loadedPlayer = game::Player(initialCameraPosition(loadedWorld));
+         if (loadedFromDisk) {
+            static_cast<void>(loadWorldPlayerState(loadedPlayer, worldInfo));
+         }
+         return {worldIndex, std::move(loadedWorld), std::move(loadedPlayer), loadedFromDisk};
+      }
    } // namespace
 
    class Application::Impl {
@@ -68,7 +90,7 @@ namespace etherblocks::app {
       Impl()
           : settings_(loadAppSettings(kSettingsPath))
           , window_({settings_.window.size, settings_.window.title, settings_.window.vsync, settings_.window.fullscreen})
-          , world_(settings_.world.size)
+          , world_(kLoadingWorldSize)
           , player_(initialCameraPosition(world_))
           , worldChunks_(world_, settings_.world.chunkSize)
           , screenSize_(settings_.window.size)
@@ -96,6 +118,7 @@ namespace etherblocks::app {
       }
 
       ~Impl() {
+         finishPendingWorldLoad();
          saveActiveWorld();
          sys::log(sys::LogLevel::Info, "Application shutting down");
       }
@@ -129,9 +152,14 @@ namespace etherblocks::app {
       }
 
       void update(float deltaTime) {
+         pollWorldLoad();
          const auto& input = window_.input();
          if (input.isKeyPressed(sys::Key::Escape)) {
             setMenuOpen(!menuOpen_);
+         }
+         if (isWorldLoading()) {
+            setMenuOpen(true);
+            return;
          }
          if (menuOpen_) {
             return;
@@ -196,7 +224,15 @@ namespace etherblocks::app {
       }
 
       void render() {
-         renderer_.clear(settings_.rendering.clearColor, graphics::ClearBuffer::Color | graphics::ClearBuffer::Depth);
+         const auto loading = isWorldLoading();
+         const auto clearColor =
+             loading && !hasLoadedWorld_ ? graphics::Color{0.01f, 0.02f, 0.04f, 1.0f} : settings_.rendering.clearColor;
+         renderer_.clear(clearColor, graphics::ClearBuffer::Color | graphics::ClearBuffer::Depth);
+
+         if (loading && !hasLoadedWorld_) {
+            renderMenuOverlay(loading);
+            return;
+         }
 
          worldMaterial_.shader().set("uView", player_.camera().createViewMatrix());
          worldMaterial_.shader().set("uProjection", createProjectionMatrix());
@@ -211,13 +247,19 @@ namespace etherblocks::app {
 
          renderer_.disable(graphics::RenderFeature::DepthTest);
          if (menuOpen_) {
-            renderer_.enable(graphics::RenderFeature::Blending);
-            handleMenuResult(
-                menu_.draw(renderer_, window_.input(), screenSize_, settings_, worlds_, activeWorldIndex_, resolutions_));
-            renderer_.disable(graphics::RenderFeature::Blending);
+            renderMenuOverlay(loading);
          } else {
             crosshair_.draw(renderer_);
          }
+         renderer_.enable(graphics::RenderFeature::DepthTest);
+      }
+
+      void renderMenuOverlay(bool loading) {
+         renderer_.disable(graphics::RenderFeature::DepthTest);
+         renderer_.enable(graphics::RenderFeature::Blending);
+         handleMenuResult(menu_.draw(renderer_, window_.input(), screenSize_, settings_, worlds_, activeWorldIndex_,
+                                     resolutions_, loading, loadingWorldLabel()));
+         renderer_.disable(graphics::RenderFeature::Blending);
          renderer_.enable(graphics::RenderFeature::DepthTest);
       }
 
@@ -242,6 +284,9 @@ namespace etherblocks::app {
       }
 
       void handleMenuResult(MenuResult result) {
+         if (isWorldLoading() && result.action != MenuAction::Quit) {
+            return;
+         }
          switch (result.action) {
             case MenuAction::None:
                break;
@@ -289,14 +334,73 @@ namespace etherblocks::app {
          if (activeWorldIndex_ < 0 || activeWorldIndex_ >= static_cast<int>(worlds_.size())) {
             return;
          }
-         if (loadWorld(world_, worlds_[static_cast<std::size_t>(activeWorldIndex_)].savePath)) {
-            if (!loadWorldPlayerState(player_, worlds_[static_cast<std::size_t>(activeWorldIndex_)])) {
-               player_ = game::Player(initialCameraPosition(world_));
-            }
-            hasUnsavedWorldChanges_ = false;
-            worldChunks_.markAllDirty();
-            selectedBlock_ = findSelectedBlock();
+         startWorldLoad(activeWorldIndex_);
+      }
+
+      void startWorldLoad(int worldIndex) {
+         if (worldIndex < 0 || worldIndex >= static_cast<int>(worlds_.size()) || isWorldLoading()) {
+            return;
          }
+
+         loadingWorldIndex_ = worldIndex;
+         setMenuOpen(true);
+         pendingWorldLoad_ = std::async(std::launch::async, [worldIndex, worldSize = settings_.world.size,
+                                                             worldInfo = worlds_[static_cast<std::size_t>(worldIndex)]]() {
+            return loadWorldInBackground(worldIndex, worldSize, worldInfo);
+         });
+      }
+
+      void pollWorldLoad() {
+         if (!pendingWorldLoad_.valid()) {
+            return;
+         }
+
+         using namespace std::chrono_literals;
+         if (pendingWorldLoad_.wait_for(0ms) != std::future_status::ready) {
+            return;
+         }
+
+         applyWorldLoad(pendingWorldLoad_.get());
+      }
+
+      void finishPendingWorldLoad() {
+         if (!pendingWorldLoad_.valid()) {
+            return;
+         }
+         applyWorldLoad(pendingWorldLoad_.get());
+      }
+
+      void applyWorldLoad(WorldLoadResult result) {
+         if (result.worldIndex < 0 || result.worldIndex >= static_cast<int>(worlds_.size())) {
+            loadingWorldIndex_ = -1;
+            return;
+         }
+
+         world_ = std::move(result.world);
+         player_ = std::move(result.player);
+         activeWorldIndex_ = result.worldIndex;
+         settings_.world.activeWorld = worlds_[static_cast<std::size_t>(activeWorldIndex_)].id;
+         static_cast<void>(saveAppSettings(settings_, kSettingsPath));
+
+         hasUnsavedWorldChanges_ = !result.loadedFromDisk;
+         if (hasUnsavedWorldChanges_) {
+            static_cast<void>(saveActiveWorld(true));
+         }
+         worldChunks_.reset(settings_.world.chunkSize);
+         selectedBlock_ = findSelectedBlock();
+         hasLoadedWorld_ = true;
+         loadingWorldIndex_ = -1;
+      }
+
+      [[nodiscard]] bool isWorldLoading() const {
+         return pendingWorldLoad_.valid();
+      }
+
+      [[nodiscard]] std::string loadingWorldLabel() const {
+         if (loadingWorldIndex_ < 0 || loadingWorldIndex_ >= static_cast<int>(worlds_.size())) {
+            return "LOADING";
+         }
+         return "LOADING " + worlds_[static_cast<std::size_t>(loadingWorldIndex_)].name;
       }
 
       bool saveActiveWorld(bool force = false) {
@@ -317,6 +421,9 @@ namespace etherblocks::app {
       }
 
       void createNewWorld() {
+         if (isWorldLoading()) {
+            return;
+         }
          static_cast<void>(saveActiveWorld());
          auto info = createWorldEntry(settings_.world.saveDirectory);
          worlds_.push_back(info);
@@ -336,11 +443,7 @@ namespace etherblocks::app {
             return;
          }
          static_cast<void>(saveActiveWorld());
-         activeWorldIndex_ = index;
-         settings_.world.activeWorld = worlds_[static_cast<std::size_t>(index)].id;
-         static_cast<void>(saveAppSettings(settings_, kSettingsPath));
-         resetGeneratedWorld();
-         loadWorldFromDisk();
+         startWorldLoad(index);
       }
 
       void refreshWorldList() {
@@ -362,7 +465,7 @@ namespace etherblocks::app {
       void resetGeneratedWorld() {
          world_ = game::World(settings_.world.size);
          player_ = game::Player(initialCameraPosition(world_));
-         worldChunks_.markAllDirty();
+         worldChunks_.reset(settings_.world.chunkSize);
          selectedBlock_ = findSelectedBlock();
       }
 
@@ -401,6 +504,9 @@ namespace etherblocks::app {
          if (activeWorldIndex_ < 0 || activeWorldIndex_ >= static_cast<int>(worlds_.size())) {
             return;
          }
+         if (isWorldLoading()) {
+            return;
+         }
 
          const auto deletedIndex = activeWorldIndex_;
          if (!deleteWorld(worlds_[static_cast<std::size_t>(deletedIndex)])) {
@@ -418,16 +524,7 @@ namespace etherblocks::app {
 
          hasUnsavedWorldChanges_ = false;
          resetGeneratedWorld();
-         if (loadWorld(world_, worlds_[static_cast<std::size_t>(activeWorldIndex_)].savePath)) {
-            if (!loadWorldPlayerState(player_, worlds_[static_cast<std::size_t>(activeWorldIndex_)])) {
-               player_ = game::Player(initialCameraPosition(world_));
-            }
-         } else {
-            hasUnsavedWorldChanges_ = true;
-            static_cast<void>(saveActiveWorld(true));
-         }
-         worldChunks_.markAllDirty();
-         selectedBlock_ = findSelectedBlock();
+         startWorldLoad(activeWorldIndex_);
       }
 
       void saveSettings() {
@@ -436,6 +533,7 @@ namespace etherblocks::app {
       }
 
       void requestClose() {
+         finishPendingWorldLoad();
          static_cast<void>(saveActiveWorld());
          window_.close();
       }
@@ -470,9 +568,12 @@ namespace etherblocks::app {
       std::vector<WorldInfo> worlds_;
       std::vector<glm::ivec2> resolutions_;
       int activeWorldIndex_{-1};
+      int loadingWorldIndex_{-1};
+      std::future<WorldLoadResult> pendingWorldLoad_;
       std::optional<game::RayHit> selectedBlock_;
       game::BlockType selectedBuildBlock_{game::BlockType::VoidCore};
       bool menuOpen_{true};
+      bool hasLoadedWorld_{false};
       bool hasUnsavedWorldChanges_{false};
    };
 

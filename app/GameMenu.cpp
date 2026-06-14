@@ -1,7 +1,9 @@
 #include "GameMenu.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
+#include <etherblocks/system/Window.hpp>
 #include <string>
 
 namespace etherblocks::app {
@@ -40,18 +42,31 @@ namespace etherblocks::app {
       }
    } // namespace
 
+   GameMenu::GameMenu()
+       : background_("./assets/menu/background.png") {}
+
    MenuResult GameMenu::draw(const engine::graphics::Renderer& renderer, const system::Input& input, glm::ivec2 screenSize,
                              AppSettings& settings, const std::vector<WorldInfo>& worlds, int activeWorldIndex,
-                             const std::vector<glm::ivec2>& resolutions) {
+                             const std::vector<glm::ivec2>& resolutions, bool loading, std::string_view loadingLabel) {
       const auto size = glm::vec2{screenSize};
-      uiLayer_.begin(screenSize, input);
-      uiLayer_.panel({0.0f, 0.0f}, size, {0.02f, 0.04f, 0.06f, 0.58f});
+      const auto time = static_cast<float>(system::Window::elapsedTime());
+      const auto titleGlow = 0.5f + 0.5f * std::sin(time * 2.2f);
+      uiLayer_.begin(screenSize, input, !loading);
+      uiLayer_.image(background_, {0.0f, 0.0f}, size, {0.68f, 0.78f, 0.90f, 1.0f});
+      uiLayer_.panel({0.0f, 0.0f}, size, {0.01f, 0.02f, 0.04f, 0.42f});
 
       const auto panelWidth = std::min(720.0f, size.x - 24.0f);
       const auto panelHeight = std::min(page_ == Page::Main ? 430.0f : 560.0f, size.y - 32.0f);
       const auto panelPosition = glm::vec2{(size.x - panelWidth) * 0.5f, std::max(16.0f, (size.y - panelHeight) * 0.5f)};
-      uiLayer_.panel(panelPosition, {panelWidth, panelHeight}, {0.07f, 0.11f, 0.14f, 0.94f});
-      uiLayer_.text("ETHER BLOCKS", {panelPosition.x + 38.0f, panelPosition.y + 32.0f}, 4.0f, {0.78f, 0.93f, 1.0f, 1.0f});
+      uiLayer_.panel(panelPosition + glm::vec2{0.0f, 8.0f}, {panelWidth, panelHeight}, {0.01f, 0.03f, 0.05f, 0.55f});
+      uiLayer_.panel(panelPosition, {panelWidth, panelHeight}, {0.05f, 0.09f, 0.12f, 0.86f});
+      uiLayer_.panel({panelPosition.x, panelPosition.y}, {panelWidth, 4.0f}, {0.12f, 0.50f, 0.78f, 0.45f + 0.35f * titleGlow});
+      uiLayer_.text("ETHER BLOCKS", {panelPosition.x + 40.0f, panelPosition.y + 34.0f}, 4.0f, {0.03f, 0.10f, 0.16f, 0.72f});
+      uiLayer_.text("ETHER BLOCKS", {panelPosition.x + 38.0f, panelPosition.y + 32.0f}, 4.0f,
+                    {0.68f + 0.20f * titleGlow, 0.90f, 1.0f, 1.0f});
+      if (loading) {
+         drawLoadingPulse({panelPosition.x + panelWidth - 164.0f, panelPosition.y + 38.0f}, time, loadingLabel);
+      }
 
       auto result = MenuResult{};
       switch (page_) {
@@ -67,6 +82,17 @@ namespace etherblocks::app {
       }
       uiLayer_.end(renderer);
       return result;
+   }
+
+   void GameMenu::drawLoadingPulse(glm::vec2 position, float time, std::string_view label) {
+      uiLayer_.text(label, position, 1.4f, {0.36f, 0.62f, 0.72f, 0.90f});
+      for (auto i = 0; i < 4; ++i) {
+         const auto phase = std::fmod(time * 3.2f + static_cast<float>(i) * 0.65f, 4.0f);
+         const auto active = phase < 1.65f;
+         const auto alpha = active ? 0.92f : 0.24f;
+         uiLayer_.panel({position.x + static_cast<float>(i) * 16.0f, position.y + 18.0f}, {10.0f, 10.0f},
+                        {0.20f, 0.72f, 1.0f, alpha});
+      }
    }
 
    MenuResult GameMenu::drawMain(glm::vec2 panelPosition, float panelWidth, float panelHeight) {

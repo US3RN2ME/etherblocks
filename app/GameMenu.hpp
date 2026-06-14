@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <etherblocks/engine/graphics/Renderer.hpp>
+#include <etherblocks/engine/graphics/Texture.hpp>
 #include <etherblocks/engine/ui/UiLayer.hpp>
 #include <etherblocks/system/Input.hpp>
 #include <glm/glm.hpp>
@@ -36,9 +37,11 @@ namespace etherblocks::app {
 
    class GameMenu {
    public:
+      GameMenu();
+
       MenuResult draw(const engine::graphics::Renderer& renderer, const system::Input& input, glm::ivec2 screenSize,
                       AppSettings& settings, const std::vector<WorldInfo>& worlds, int activeWorldIndex,
-                      const std::vector<glm::ivec2>& resolutions);
+                      const std::vector<glm::ivec2>& resolutions, bool loading, std::string_view loadingLabel);
 
    private:
       enum class Page { Main, Worlds, Settings };
@@ -48,6 +51,7 @@ namespace etherblocks::app {
                             int activeWorldIndex);
       MenuResult drawSettings(glm::vec2 panelPosition, float panelWidth, float panelHeight, AppSettings& settings,
                               const std::vector<glm::ivec2>& resolutions);
+      void drawLoadingPulse(glm::vec2 position, float time, std::string_view label);
 
       template <typename OnChange>
       void settingRow(std::string_view label, int value, float y, float x, float width, float step, OnChange onChange) {
@@ -78,6 +82,7 @@ namespace etherblocks::app {
       }
 
       engine::ui::UiLayer uiLayer_;
+      engine::graphics::Texture background_;
       Page page_{Page::Main};
       int settingsPage_{0};
       int worldsPage_{0};

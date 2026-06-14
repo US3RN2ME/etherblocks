@@ -18,9 +18,16 @@ namespace etherblocks::engine::ui {
          glm::vec4 color{};
       };
 
+      struct ImageVertex {
+         glm::vec2 position{};
+         glm::vec2 textureCoordinate{};
+         glm::vec4 color{};
+      };
+
       UiLayer();
 
-      void begin(glm::ivec2 screenSize, const system::Input& input);
+      void begin(glm::ivec2 screenSize, const system::Input& input, bool inputEnabled = true);
+      void image(const graphics::Texture& texture, glm::vec2 position, glm::vec2 size, graphics::Color tint);
       void panel(glm::vec2 position, glm::vec2 size, graphics::Color color);
       [[nodiscard]] bool button(std::string_view label, glm::vec2 position, glm::vec2 size);
       void text(std::string_view text, glm::vec2 position, float scale, graphics::Color color);
@@ -34,9 +41,14 @@ namespace etherblocks::engine::ui {
 
       graphics::Mesh mesh_;
       graphics::Material material_;
+      graphics::Mesh imageMesh_;
+      graphics::Material imageMaterial_;
       std::vector<Vertex> vertices_;
+      std::vector<ImageVertex> imageVertices_;
+      const graphics::Texture* imageTexture_{};
       const system::Input* input_{};
       glm::ivec2 screenSize_{};
+      bool inputEnabled_{true};
    };
 
 } // namespace etherblocks::engine::ui

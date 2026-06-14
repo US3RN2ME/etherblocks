@@ -2,6 +2,7 @@
 #include <array>
 #include <cctype>
 #include <cstddef>
+#include <etherblocks/engine/graphics/Texture.hpp>
 #include <etherblocks/engine/ui/UiLayer.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -110,16 +111,50 @@ namespace etherblocks::engine::ui {
              graphics::VertexAttribute{1, 4, graphics::VertexAttributeType::Float, false, offsetof(UiLayer::Vertex, color)},
          };
       }
+
+      std::array<graphics::VertexAttribute, 3> imageLayout() noexcept {
+         return {
+             graphics::VertexAttribute{0, 2, graphics::VertexAttributeType::Float, false,
+                                       offsetof(UiLayer::ImageVertex, position)},
+             graphics::VertexAttribute{1, 2, graphics::VertexAttributeType::Float, false,
+                                       offsetof(UiLayer::ImageVertex, textureCoordinate)},
+             graphics::VertexAttribute{2, 4, graphics::VertexAttributeType::Float, false,
+                                       offsetof(UiLayer::ImageVertex, color)},
+         };
+      }
    } // namespace
 
    UiLayer::UiLayer()
        : mesh_(sizeof(Vertex), layout())
-       , material_("./shaders/ui.vertex.glsl", "./shaders/ui.fragment.glsl") {}
+       , material_("./shaders/ui.vertex.glsl", "./shaders/ui.fragment.glsl")
+       , imageMesh_(sizeof(ImageVertex), imageLayout())
+       , imageMaterial_("./shaders/ui_image.vertex.glsl", "./shaders/ui_image.fragment.glsl") {
+      imageMaterial_.shader().set("uTexture", 0);
+   }
 
-   void UiLayer::begin(glm::ivec2 screenSize, const system::Input& input) {
+   void UiLayer::begin(glm::ivec2 screenSize, const system::Input& input, bool inputEnabled) {
       screenSize_ = screenSize;
       input_ = &input;
+      inputEnabled_ = inputEnabled;
       vertices_.clear();
+      imageVertices_.clear();
+      imageTexture_ = nullptr;
+   }
+
+   void UiLayer::image(const graphics::Texture& texture, glm::vec2 position, glm::vec2 size, Color tint) {
+      imageTexture_ = &texture;
+      const auto color = toVec4(tint);
+      const auto a = position;
+      const auto b = glm::vec2{position.x + size.x, position.y};
+      const auto c = glm::vec2{position.x + size.x, position.y + size.y};
+      const auto d = glm::vec2{position.x, position.y + size.y};
+
+      imageVertices_.push_back({a, {0.0f, 0.0f}, color});
+      imageVertices_.push_back({b, {1.0f, 0.0f}, color});
+      imageVertices_.push_back({c, {1.0f, 1.0f}, color});
+      imageVertices_.push_back({a, {0.0f, 0.0f}, color});
+      imageVertices_.push_back({c, {1.0f, 1.0f}, color});
+      imageVertices_.push_back({d, {0.0f, 1.0f}, color});
    }
 
    void UiLayer::panel(glm::vec2 position, glm::vec2 size, Color color) {
@@ -155,12 +190,20 @@ namespace etherblocks::engine::ui {
    }
 
    void UiLayer::end(const graphics::Renderer& renderer) {
+      const auto projection =
+          glm::ortho(0.0f, static_cast<float>(screenSize_.x), static_cast<float>(screenSize_.y), 0.0f, -1.0f, 1.0f);
+      if (!imageVertices_.empty() && imageTexture_ != nullptr) {
+         imageMesh_.upload(std::span<const ImageVertex>{imageVertices_}, graphics::BufferUsage::DynamicDraw);
+         imageMaterial_.setTexture(*imageTexture_);
+         imageMaterial_.shader().set("uProjection", projection);
+         renderer.draw(imageMesh_, imageMaterial_);
+      }
+
       if (vertices_.empty()) {
          return;
       }
       mesh_.upload(std::span<const Vertex>{vertices_}, graphics::BufferUsage::DynamicDraw);
-      material_.shader().set("uProjection", glm::ortho(0.0f, static_cast<float>(screenSize_.x),
-                                                       static_cast<float>(screenSize_.y), 0.0f, -1.0f, 1.0f));
+      material_.shader().set("uProjection", projection);
       renderer.draw(mesh_, material_);
    }
 
@@ -198,7 +241,7 @@ namespace etherblocks::engine::ui {
    }
 
    bool UiLayer::contains(glm::vec2 position, glm::vec2 size) const noexcept {
-      if (input_ == nullptr) {
+      if (!inputEnabled_ || input_ == nullptr) {
          return false;
       }
       const auto mouse = input_->mousePosition();
