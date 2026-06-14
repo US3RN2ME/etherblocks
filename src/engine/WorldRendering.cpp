@@ -1,12 +1,11 @@
-#include "SceneRendering.hpp"
-
 #include <algorithm>
 #include <cstddef>
+#include <etherblocks/engine/WorldRendering.hpp>
 
-namespace etherblocks::app {
+namespace etherblocks::engine {
 
    namespace {
-      namespace graphics = engine::graphics;
+      namespace graphics = etherblocks::engine::graphics;
 
       constexpr std::array kMeshLayout{
           graphics::VertexAttribute{0, 3, graphics::VertexAttributeType::Float, false, offsetof(MeshVertex, position)},
@@ -113,7 +112,7 @@ namespace etherblocks::app {
       }};
    } // namespace
 
-   std::span<const engine::graphics::VertexAttribute> meshLayout() noexcept {
+   std::span<const graphics::VertexAttribute> meshLayout() noexcept {
       return kMeshLayout;
    }
 
@@ -206,11 +205,11 @@ namespace etherblocks::app {
       mesh_.setVertexCount(1);
    }
 
-   void CrosshairRenderer::draw(const engine::graphics::Renderer& renderer) {
+   void CrosshairRenderer::draw(const graphics::Renderer& renderer) {
       material_.shader().set("uType", 0);
       material_.shader().set("uSize", 8.0f);
       material_.shader().set("uColor", glm::vec4{1.0f});
-      renderer.draw(mesh_, material_, engine::graphics::Primitive::Points);
+      renderer.draw(mesh_, material_, graphics::Primitive::Points);
    }
 
-} // namespace etherblocks::app
+} // namespace etherblocks::engine

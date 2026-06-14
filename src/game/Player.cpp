@@ -71,6 +71,14 @@ namespace etherblocks::game {
              max.z > voxelMin.z;
    }
 
+   void Player::setCameraPose(const glm::vec3& cameraPosition, float yaw, float pitch) {
+      camera_.setPosition(cameraPosition);
+      camera_.setYaw(yaw);
+      camera_.setPitch(pitch);
+      position_ = cameraPosition - glm::vec3{0.0f, settings_.eyeHeight, 0.0f};
+      velocity_ = {};
+   }
+
    void Player::setMode(PlayerMode mode) {
       mode_ = mode;
       velocity_ = {};

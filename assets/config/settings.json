@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "window": {
+    "title": "etherblocks",
+    "size": [800, 600],
+    "vsync": true,
+    "fullscreen": false,
+    "cursor_disabled": true,
+    "raw_mouse_motion": true
+  },
+  "world": {
+    "size": [256, 64, 256],
+    "chunk_size": 16,
+    "save_path": "./world.ebw",
+    "save_directory": "./saves",
+    "active_world": "world_001"
+  },
+  "rendering": {
+    "clear_color": [0.11, 0.18, 0.24, 1.0],
+    "sky_light": [1.08, 1.14, 1.2, 1.0],
+    "ground_light": [0.42, 0.46, 0.52, 1.0],
+    "view_distance": 29.0,
+    "projection": {
+      "near": 0.1,
+      "far": 100.0
+    },
+    "fog": {
+      "start": 16.0,
+      "end": 29.0
+    }
+  },
+  "player": {
+    "interaction_range": 8.0
+  },
+  "assets": {
+    "block_manifest": "./assets/blocks/manifest.json"
+  }
+}

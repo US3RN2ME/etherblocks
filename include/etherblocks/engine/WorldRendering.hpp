@@ -1,5 +1,5 @@
-#ifndef APP_SCENERENDERING_HPP
-#define APP_SCENERENDERING_HPP
+#ifndef ETHERBLOCKS_ENGINE_WORLDRENDERING_HPP
+#define ETHERBLOCKS_ENGINE_WORLDRENDERING_HPP
 
 #include <array>
 #include <etherblocks/engine/graphics/Material.hpp>
@@ -11,7 +11,7 @@
 #include <span>
 #include <vector>
 
-namespace etherblocks::app {
+namespace etherblocks::engine {
 
    struct MeshVertex {
       glm::vec3 position{};
@@ -19,7 +19,7 @@ namespace etherblocks::app {
       glm::vec3 normal{0.0f, 1.0f, 0.0f};
    };
 
-   [[nodiscard]] std::span<const engine::graphics::VertexAttribute> meshLayout() noexcept;
+   [[nodiscard]] std::span<const graphics::VertexAttribute> meshLayout() noexcept;
    [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType);
    [[nodiscard]] std::vector<MeshVertex> buildWorldMesh(const game::World& world, game::BlockType blockType,
                                                         glm::ivec3 minInclusive, glm::ivec3 maxExclusive);
@@ -29,13 +29,13 @@ namespace etherblocks::app {
    public:
       CrosshairRenderer();
 
-      void draw(const engine::graphics::Renderer& renderer);
+      void draw(const graphics::Renderer& renderer);
 
    private:
-      engine::graphics::Mesh mesh_;
-      engine::graphics::Material material_;
+      graphics::Mesh mesh_;
+      graphics::Material material_;
    };
 
-} // namespace etherblocks::app
+} // namespace etherblocks::engine
 
-#endif // APP_SCENERENDERING_HPP
+#endif // ETHERBLOCKS_ENGINE_WORLDRENDERING_HPP

@@ -3,9 +3,11 @@
 #include <etherblocks/system/detail/GlContext.hpp>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <algorithm>
 #include <memory>
 #include <queue>
 #include <stdexcept>
+#include <vector>
 
 namespace etherblocks::system {
    namespace {
@@ -20,6 +22,9 @@ namespace etherblocks::system {
       std::unique_ptr<GLFWwindow, WindowDeleter> handle;
       std::queue<event::Any> events;
       Input input;
+      glm::ivec2 windowedPosition{100, 100};
+      glm::ivec2 windowedSize{800, 600};
+      bool fullscreen{false};
    };
 
    namespace {
@@ -246,10 +251,23 @@ namespace etherblocks::system {
       glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
 
-      impl_->handle.reset(glfwCreateWindow(cfg.size.x, cfg.size.y, cfg.title.c_str(), nullptr, nullptr));
+      impl_->windowedSize = cfg.size;
+      auto* monitor = cfg.fullscreen ? glfwGetPrimaryMonitor() : nullptr;
+      impl_->fullscreen = monitor != nullptr;
+      auto size = cfg.size;
+      if (monitor != nullptr) {
+         if (const auto* mode = glfwGetVideoMode(monitor); mode != nullptr) {
+            size = {mode->width, mode->height};
+         }
+      }
+
+      impl_->handle.reset(glfwCreateWindow(size.x, size.y, cfg.title.c_str(), monitor, nullptr));
       if (impl_->handle == nullptr) {
          log(LogLevel::Error, "Failed to create GLFW window: " + cfg.title);
          throw std::runtime_error{"Failed to create GLFW window"};
+      }
+      if (!impl_->fullscreen) {
+         glfwGetWindowPos(impl_->handle.get(), &impl_->windowedPosition.x, &impl_->windowedPosition.y);
       }
 
       glfwSetWindowUserPointer(impl_->handle.get(), this);
@@ -329,8 +347,68 @@ namespace etherblocks::system {
       return {width, height};
    }
 
+   std::vector<glm::ivec2> Window::availableResolutions() const {
+      auto resolutions = std::vector<glm::ivec2>{};
+      const auto monitor = glfwGetPrimaryMonitor();
+      if (monitor == nullptr) {
+         return resolutions;
+      }
+
+      int modeCount{};
+      const auto modes = glfwGetVideoModes(monitor, &modeCount);
+      if (modes == nullptr) {
+         return resolutions;
+      }
+
+      for (auto i = 0; i < modeCount; ++i) {
+         const auto size = glm::ivec2{modes[i].width, modes[i].height};
+         if (std::find(resolutions.begin(), resolutions.end(), size) == resolutions.end()) {
+            resolutions.push_back(size);
+         }
+      }
+      std::sort(resolutions.begin(), resolutions.end(), [](glm::ivec2 lhs, glm::ivec2 rhs) {
+         return lhs.x * lhs.y < rhs.x * rhs.y;
+      });
+      return resolutions;
+   }
+
    double Window::elapsedTime() noexcept {
       return glfwGetTime();
+   }
+
+   void Window::setSize(glm::ivec2 size) {
+      impl_->windowedSize = size;
+      if (impl_->fullscreen) {
+         return;
+      }
+      glfwSetWindowSize(impl_->handle.get(), size.x, size.y);
+   }
+
+   void Window::setVsync(bool enabled) {
+      glfwSwapInterval(enabled ? 1 : 0);
+   }
+
+   void Window::setFullscreen(bool enabled) {
+      if (impl_->fullscreen == enabled) {
+         return;
+      }
+
+      auto* monitor = glfwGetPrimaryMonitor();
+      const auto* mode = monitor != nullptr ? glfwGetVideoMode(monitor) : nullptr;
+      if (monitor == nullptr || mode == nullptr) {
+         log(LogLevel::Warning, "Failed to change fullscreen mode: no primary monitor");
+         return;
+      }
+
+      if (enabled) {
+         glfwGetWindowPos(impl_->handle.get(), &impl_->windowedPosition.x, &impl_->windowedPosition.y);
+         glfwGetWindowSize(impl_->handle.get(), &impl_->windowedSize.x, &impl_->windowedSize.y);
+         glfwSetWindowMonitor(impl_->handle.get(), monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+      } else {
+         glfwSetWindowMonitor(impl_->handle.get(), nullptr, impl_->windowedPosition.x, impl_->windowedPosition.y,
+                              impl_->windowedSize.x, impl_->windowedSize.y, 0);
+      }
+      impl_->fullscreen = enabled;
    }
 
    void Window::setCursorMode(CursorMode mode) {

@@ -46,6 +46,7 @@ namespace etherblocks::engine::graphics {
       void clear(Color color, ClearBuffer buffers) const noexcept;
       void enable(RenderFeature feature) const noexcept;
       void disable(RenderFeature feature) const noexcept;
+      void setAlphaBlending() const noexcept;
       void setLineWidth(float width) const noexcept;
       void setViewport(glm::ivec2 size) const noexcept;
    };

@@ -37,6 +37,7 @@ namespace etherblocks::game {
       [[nodiscard]] PlayerMode mode() const noexcept;
       [[nodiscard]] bool occupiesVoxel(glm::ivec3 voxel) const noexcept;
 
+      void setCameraPose(const glm::vec3& cameraPosition, float yaw, float pitch);
       void setMode(PlayerMode mode);
       void toggleMode();
 

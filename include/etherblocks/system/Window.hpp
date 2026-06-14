@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace etherblocks::system {
 
@@ -59,6 +60,7 @@ namespace etherblocks::system {
       glm::ivec2 size{800, 600};
       std::string title{"Window"};
       bool vsync{true};
+      bool fullscreen{false};
       int glMajor{3};
       int glMinor{3};
    };
@@ -86,8 +88,12 @@ namespace etherblocks::system {
 
       [[nodiscard]] glm::ivec2 framebufferSize() const;
       [[nodiscard]] glm::ivec2 size() const;
+      [[nodiscard]] std::vector<glm::ivec2> availableResolutions() const;
       [[nodiscard]] static double elapsedTime() noexcept;
 
+      void setSize(glm::ivec2 size);
+      void setVsync(bool enabled);
+      void setFullscreen(bool enabled);
       void setCursorMode(CursorMode mode);
       void setStickyKeys(bool enabled);
       void setRawMouseMotion(bool enabled);

@@ -79,6 +79,10 @@ namespace etherblocks::engine::graphics {
       glDisable(toGl(feature));
    }
 
+   void Renderer::setAlphaBlending() const noexcept {
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+   }
+
    void Renderer::setLineWidth(float width) const noexcept {
       glLineWidth(width);
    }
