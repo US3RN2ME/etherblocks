@@ -7,6 +7,9 @@
 
 namespace etherblocks::system {
 
+   /**
+    * @brief Keyboard key identifiers used by the input system.
+    */
    enum class Key {
       A,
       B,
@@ -97,6 +100,9 @@ namespace etherblocks::system {
       Unknown,
    };
 
+   /**
+    * @brief Mouse button identifiers used by the input system.
+    */
    enum class MouseButton {
       Left,
       Right,
@@ -106,20 +112,92 @@ namespace etherblocks::system {
       Unknown,
    };
 
+   /**
+    * @brief Per-frame keyboard, mouse button, cursor, and scroll state.
+    */
    class Input {
    public:
+      /**
+       * @brief Test whether a key was pressed during the current frame.
+       *
+       * @param key Key to test.
+ *
+
+       * * @return True when the key transitioned to held this frame.
+       */
       [[nodiscard]] bool isKeyPressed(Key key) const noexcept;
+
+      /**
+       * @brief Test whether a key is currently held.
+       *
+       * @param key Key to test.
+       *
+       *
+       * @return True while the key is held.
+       */
       [[nodiscard]] bool isKeyHeld(Key key) const noexcept;
+
+      /**
+       * @brief Test whether a key was released during the current frame.
+       *
+       * @param key Key to test.
+
+       * *
+       * @return True when the key transitioned to released this frame.
+       */
       [[nodiscard]] bool isKeyReleased(Key key) const noexcept;
 
+      /**
+       * @brief Test whether a mouse button was pressed during the current frame.
+       *
+       * @param btn Mouse
+       * button to test.
+       *
+       * @return True when the button transitioned to held this frame.
+       */
       [[nodiscard]] bool isMouseButtonPressed(MouseButton btn) const noexcept;
+
+      /**
+       * @brief Test whether a mouse button is currently held.
+       *
+       * @param btn Mouse button to test.
+ *
+
+       * * @return True while the button is held.
+       */
       [[nodiscard]] bool isMouseButtonHeld(MouseButton btn) const noexcept;
+
+      /**
+       * @brief Test whether a mouse button was released during the current frame.
+       *
+       * @param btn Mouse
+       * button to test.
+       *
+       * @return True when the button transitioned to released this frame.
+       */
       [[nodiscard]] bool isMouseButtonReleased(MouseButton btn) const noexcept;
 
+      /**
+       * @brief Return the latest cursor position.
+       *
+       * @return Cursor position in window coordinates.
+
+       */
       [[nodiscard]] glm::dvec2 mousePosition() const noexcept;
 
+      /**
+       * @brief Return cursor movement accumulated for the current frame.
+       *
+       * @return Cursor delta in
+       * window coordinates.
+       */
       [[nodiscard]] glm::dvec2 mouseDelta() const noexcept;
 
+      /**
+       * @brief Return scroll movement accumulated for the current frame.
+       *
+       * @return Scroll delta.
+ */
       [[nodiscard]] glm::dvec2 scrollDelta() const noexcept;
 
    private:

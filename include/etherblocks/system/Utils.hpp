@@ -6,7 +6,17 @@
 
 namespace etherblocks::system {
 
+   /**
+    * @brief Miscellaneous system helper functions.
+    */
    struct Utils {
+      /**
+       * @brief Read an entire file into a string.
+       *
+       * @param path Path to the file.
+       *
+       * @return File contents.
+       */
       static std::string readFile(std::string_view path);
    };
 

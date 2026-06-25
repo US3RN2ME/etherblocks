@@ -13,14 +13,48 @@
 
 namespace etherblocks::engine {
 
+   /**
+    * @brief Chunked renderer cache for voxel world meshes.
+    */
    class WorldChunks {
    public:
+      /**
+       * @brief Construct chunk storage for a world.
+       *
+       * @param world World to render.
+       * @param chunkSize Chunk width and depth in voxels.
+       */
       WorldChunks(game::World& world, int chunkSize);
 
+      /**
+       * @brief Draw visible chunks, rebuilding dirty meshes on demand.
+       *
+       * @param renderer Renderer used for drawing.
+       * @param material Material shared by world meshes.
+       * @param textures Textures for renderable block types.
+       * @param cameraPosition Current camera position.
+       * @param viewDistance Maximum visible distance.
+       */
       void draw(const graphics::Renderer& renderer, graphics::Material& material,
                 const std::array<const graphics::Texture*, 5>& textures, glm::vec3 cameraPosition, float viewDistance);
+
+      /**
+       * @brief Rebuild the chunk grid with a new chunk size.
+       *
+       * @param chunkSize New chunk width and depth in voxels.
+       */
       void reset(int chunkSize);
+
+      /**
+       * @brief Mark the chunk containing a block as needing rebuild.
+       *
+       * @param blockPosition Edited block position.
+       */
       void markDirty(glm::ivec3 blockPosition);
+
+      /**
+       * @brief Mark every chunk as needing rebuild.
+       */
       void markAllDirty();
 
    private:
