@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "atlas": {
+    "columns": 2,
+    "rows": 3,
+    "tile_size": 512,
+    "size": [1024, 1536]
+  },
+  "blocks": {
+    "void_core": {
+      "texture": "./assets/blocks/void_core.png"
+    },
+    "void_crystal": {
+      "texture": "./assets/blocks/void_crystal.png"
+    },
+    "void_glass": {
+      "texture": "./assets/blocks/void_glass.png"
+    },
+    "void_bedrock": {
+      "texture": "./assets/blocks/void_bedrock.png"
+    },
+    "void_stone": {
+      "texture": "./assets/blocks/void_stone.png"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+/**
+ * @mainpage Ether Blocks API Reference
+ *
+ * Ether Blocks is a first-person crystalline voxel sandbox. The codebase is
+ * split into small runtime modules:
+ *
+ * - etherblocks::game owns voxel world data, player state, and voxel ray
+ *   casting.
+ * - etherblocks::engine owns camera math, generated world meshes, chunked
+ *   rendering, UI drawing, and graphics abstractions.
+ * - etherblocks::system owns windowing, input, logging, timing, and file
+ *   utilities.
+ *
+ * Typical runtime flow:
+ *
+ * @code{.cpp}
+ * etherblocks::game::World world{{128, 64, 128}};
+ * etherblocks::game::Player player{{8.0f, 8.0f, 8.0f}};
+ * etherblocks::engine::WorldChunks chunks{world, 16};
+ *
+ * auto hit = etherblocks::game::castVoxelRay(
+ *    player.camera().position(),
+ *    player.camera().front(),
+ *    8.0f,
+ *    [&](glm::ivec3 position) {
+ *       return world.isSolid(position);
+ *    });
+ * @endcode
+ */

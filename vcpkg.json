@@ -8,6 +8,15 @@
     "glfw3",
     "glad",
     "glm",
+    "nlohmann-json",
     "stb"
-  ]
+  ],
+  "features": {
+    "tests": {
+      "description": "Build Tests",
+      "dependencies": [
+        "bext-ut"
+      ]
+    }
+  }
 }
