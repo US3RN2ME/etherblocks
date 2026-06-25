@@ -18,5 +18,7 @@ target_link_libraries(
 
 target_include_directories(
    etherblocks
-   PUBLIC ${CMAKE_SOURCE_DIR}/include
+   PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
    PRIVATE ${Stb_INCLUDE_DIR})

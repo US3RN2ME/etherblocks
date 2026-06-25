@@ -15,3 +15,15 @@ add_custom_command(
    POST_BUILD
    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:app>/shaders"
    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:app>/assets")
+
+if(ETHERBLOCKS_ENABLE_INSTALL)
+   install(TARGETS app RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+   install(
+      DIRECTORY "${CMAKE_SOURCE_DIR}/assets"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+   install(
+      DIRECTORY "${CMAKE_SOURCE_DIR}/shaders"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 option(ETHERBLOCKS_BUILD_TESTS "Build tests" ON)
+option(ETHERBLOCKS_BUILD_APP "Build application executable" ON)
 option(ETHERBLOCKS_BUILD_DOCS "Build API documentation with Doxygen" OFF)
 option(ETHERBLOCKS_ENABLE_INSTALL "Generate install rules" ON)
 
@@ -15,11 +16,16 @@ project(
    DESCRIPTION "A first-person construction game"
    LANGUAGES CXX)
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 configure_file("${PROJECT_SOURCE_DIR}/cmake/version.hpp.in" "${PROJECT_BINARY_DIR}/include/rude/version.hpp" @ONLY)
 
 add_subdirectory(src)
 
-add_subdirectory(app)
+if(ETHERBLOCKS_BUILD_APP)
+   add_subdirectory(app)
+endif()
 
 if(ETHERBLOCKS_BUILD_TESTS)
    enable_testing()
@@ -42,4 +48,41 @@ if(ETHERBLOCKS_BUILD_DOCS)
    else()
       message(STATUS "Doxygen not found; docs target disabled")
    endif()
+endif()
+
+if(ETHERBLOCKS_ENABLE_INSTALL)
+   set(ETHERBLOCKS_INSTALL_CMAKEDIR "${CMAKE_INSTALL_LIBDIR}/cmake/etherblocks")
+
+   install(
+      TARGETS etherblocks
+      EXPORT etherblocksTargets
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
+   install(
+      DIRECTORY "${PROJECT_SOURCE_DIR}/include/"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      FILES_MATCHING
+      PATTERN "*.hpp")
+
+   install(
+      EXPORT etherblocksTargets
+      NAMESPACE etherblocks::
+      DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
+
+   configure_package_config_file(
+      "${PROJECT_SOURCE_DIR}/cmake/etherblocksConfig.cmake.in"
+      "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake"
+      INSTALL_DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
+
+   write_basic_package_version_file(
+      "${PROJECT_BINARY_DIR}/etherblocksConfigVersion.cmake"
+      VERSION "${PROJECT_VERSION}"
+      COMPATIBILITY SameMajorVersion)
+
+   install(
+      FILES
+         "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake"
+         "${PROJECT_BINARY_DIR}/etherblocksConfigVersion.cmake"
+      DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
 endif()
