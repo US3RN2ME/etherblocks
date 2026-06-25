@@ -4,6 +4,11 @@ option(ETHERBLOCKS_BUILD_TESTS "Build tests" ON)
 option(ETHERBLOCKS_BUILD_DOCS "Build API documentation with Doxygen" OFF)
 option(ETHERBLOCKS_ENABLE_INSTALL "Generate install rules" ON)
 
+if(ETHERBLOCKS_BUILD_TESTS)
+   list(APPEND VCPKG_MANIFEST_FEATURES tests)
+   list(REMOVE_DUPLICATES VCPKG_MANIFEST_FEATURES)
+endif()
+
 project(
    etherblocks
    VERSION 0.1.0
@@ -15,6 +20,11 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/version.hpp.in" "${PROJECT_BINARY_DI
 add_subdirectory(src)
 
 add_subdirectory(app)
+
+if(ETHERBLOCKS_BUILD_TESTS)
+   enable_testing()
+   add_subdirectory(tests)
+endif()
 
 if(ETHERBLOCKS_BUILD_DOCS)
    find_package(Doxygen QUIET)
