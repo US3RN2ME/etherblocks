@@ -71,8 +71,7 @@ if(ETHERBLOCKS_ENABLE_INSTALL)
       DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
 
    configure_package_config_file(
-      "${PROJECT_SOURCE_DIR}/cmake/etherblocksConfig.cmake.in"
-      "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake"
+      "${PROJECT_SOURCE_DIR}/cmake/etherblocksConfig.cmake.in" "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake"
       INSTALL_DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
 
    write_basic_package_version_file(
@@ -80,9 +79,6 @@ if(ETHERBLOCKS_ENABLE_INSTALL)
       VERSION "${PROJECT_VERSION}"
       COMPATIBILITY SameMajorVersion)
 
-   install(
-      FILES
-         "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake"
-         "${PROJECT_BINARY_DIR}/etherblocksConfigVersion.cmake"
-      DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
+   install(FILES "${PROJECT_BINARY_DIR}/etherblocksConfig.cmake" "${PROJECT_BINARY_DIR}/etherblocksConfigVersion.cmake"
+           DESTINATION "${ETHERBLOCKS_INSTALL_CMAKEDIR}")
 endif()
