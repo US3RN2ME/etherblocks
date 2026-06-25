@@ -1,65 +1,94 @@
 # Ether Blocks
 
-Ether Blocks is a first-person crystalline construction game set in a dark void.
-It is not intended to be a Minecraft clone. The goal is a focused, atmospheric
-building sandbox with a minimal sci-fi visual language.
+![Ether Blocks main menu](assets/readme/main-menu.png)
 
-## Vision
+**Ether Blocks** is a first-person voxel sandbox set inside a cold, crystalline void.
+Mine, place, and shape glowing blocks while the world hangs in darkness around you.
 
-There is no sky, terrain horizon, or conventional world backdrop. Structures
-float in an empty space, with darkness and fog closing in around the edges of
-the visible area.
+This is not a Minecraft clone. The goal is a tighter atmospheric builder: minimal UI,
+sharp block silhouettes, blue-black sci-fi lighting, and a world that feels like a
+digital crystal cave suspended in empty space.
 
-Blocks are geometric and textureless. Their surfaces emit a cold blue or cyan
-glow, giving the world the appearance of a digital crystal lattice: a block
-builder imagined through a 2077-style minimalist aesthetic.
+## Game Pitch
 
-The design can later grow beyond simple construction:
+You wake in the ether with nothing but a crosshair, a handful of void materials, and
+space to build. Every block is part of a floating lattice. Every edit changes the
+shape of the structure around you.
 
-- block types with distinct colors and emission levels;
-- blocks that react to adjacent materials;
-- energy propagation through connected structures;
-- light, motion, or transformation rules driven by block combinations.
+- Explore a dark void world from a first-person view.
+- Aim at blocks with voxel ray casting.
+- Place new blocks against selected faces.
+- Remove blocks to carve paths, rooms, bridges, and crystalline frames.
+- Switch between five void materials: core, crystal, glass, bedrock, and stone.
+- Save worlds and return to them through the in-game menu.
 
-## Current Prototype
+## Current Features
 
-The repository currently contains an early interactive prototype:
-
-- first-person camera controls;
-- voxel selection with ray casting;
-- placing and removing blocks;
-- mesh rebuilding after world edits;
-- a selection outline and center crosshair;
-- a small OpenGL abstraction layer for buffers, meshes, materials, textures,
-  shaders, rendering, window management, and input.
-
-The void environment, fog, emissive materials, and textureless crystalline art
-direction are the next visual milestones.
+- First-person camera movement and mouse look.
+- Real-time block selection with a center crosshair and selection outline.
+- Block placement and removal.
+- Chunked world mesh rebuilding after edits.
+- Multiple block textures loaded from an asset manifest.
+- World persistence with player camera state.
+- Main menu with resume, world selection, new world, delete world, settings, and quit.
+- Settings for video, fog, clear color, input, world size, and chunk size.
+- OpenGL rendering foundation for meshes, textures, materials, UI, framebuffers, and window input.
 
 ## Controls
 
-| Input              | Action                |
-|--------------------|-----------------------|
-| `W`, `A`, `S`, `D` | Move                  |
-| Mouse              | Look around           |
-| Left mouse button  | Place a block         |
-| Right mouse button | Remove a block        |
-| Mouse wheel        | Adjust camera zoom    |
-| `Esc`              | Close the application |
+| Input | Action |
+| --- | --- |
+| `W`, `A`, `S`, `D` | Move |
+| Mouse | Look around |
+| Left mouse button | Place selected block |
+| Right mouse button | Remove targeted block |
+| `1` - `5` | Select block material |
+| Mouse wheel | Adjust camera zoom |
+| `Esc` | Open menu |
+| `F9` | Reload world from disk |
+
+## World Style
+
+Ether Blocks is built around a specific mood:
+
+- no normal skybox;
+- no terrain horizon;
+- no friendly grassland palette;
+- floating structures in fog-heavy darkness;
+- cyan-blue emissive surfaces;
+- texture detail that reads like fractured void crystal.
+
+The menu screenshot above shows the intended tone: quiet, sharp, cold, and slightly
+hostile.
 
 ## Building
 
 The project uses CMake and vcpkg manifest mode. It requires a C++23 compiler.
 
 ```sh
-cmake -S . -B build
-cmake --build build
+cmake -B ./build
+cmake --build ./build --parallel
 ```
 
-The executable is generated as `build/app/app.exe` on Windows.
+On Windows, the executable is generated at:
+
+```text
+build/app/app.exe
+```
+
+Run it from the repository root so relative asset paths resolve correctly.
+
+## Roadmap
+
+- Stronger in-game atmosphere: fog tuning, glow passes, and darker void composition.
+- More game rules for block combinations and adjacent-material reactions.
+- Energy propagation through connected structures.
+- Animated or reactive block states.
+- More world tools for faster building and editing.
+- Better packaging so the game can be launched without a developer environment.
 
 ## Status
 
 Ether Blocks is experimental and under active development. The current focus is
-building a clean rendering foundation before expanding the world simulation and
-visual effects.
+turning the prototype into a coherent playable sandbox while keeping the rendering
+and world systems simple enough to evolve.
